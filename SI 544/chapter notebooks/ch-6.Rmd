@@ -1,0 +1,189 @@
+---
+title: "ch6_MultipleRegression"
+author: "Matthew Garvin"
+date: "10/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(ISLR)
+```
+```{r}
+evals_ch6 <- evals %>%
+  select(ID, score, age, gender)
+```
+
+```{r}
+glimpse(evals_ch6)
+```
+
+```{r}
+evals_ch6 %>% sample_n(size = 5)
+```
+
+```{r}
+evals_ch6 %>% select(score, age, gender) %>% skim()
+```
+
+```{r}
+evals_ch6 %>% 
+  get_correlation(formula = score ~ age)
+```
+
+```{r}
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point() +
+  labs(x = "Age", y = "Teaching Score", color = "Gender") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+```{r}
+# Fit regression model:
+score_model_interaction <- lm(score ~ age * gender, data = evals_ch6)
+
+# Get regression table:
+get_regression_table(score_model_interaction)
+```
+
+```{r}
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point() +
+  labs(x = "Age", y = "Teaching Score", color = "Gender") +
+  geom_parallel_slopes(se = FALSE)
+```
+
+```{r}
+# Fit regression model:
+score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch6)
+# Get regression table:
+get_regression_table(score_model_parallel_slopes)
+```
+
+```{r}
+credit_ch6 <- Credit %>% as_tibble() %>% 
+  select(ID, debt = Balance, credit_limit = Limit, 
+         income = Income, credit_rating = Rating, age = Age)
+```
+
+```{r}
+glimpse(credit_ch6)
+```
+
+```{r}
+credit_ch6 %>% sample_n(size = 5)
+```
+
+```{r}
+credit_ch6 %>% select(debt, credit_limit, income) %>% skim()
+```
+
+```{r}
+credit_ch6 %>% get_correlation(debt ~ credit_limit)
+credit_ch6 %>% get_correlation(debt ~ income)
+```
+
+```{r}
+credit_ch6 %>% 
+  select(debt, credit_limit, income) %>% 
+  cor()
+```
+```{r}
+ggplot(credit_ch6, aes(x = credit_limit, y = debt)) +
+  geom_point() +
+  labs(x = "Credit limit (in $)", y = "Credit card debt (in $)", 
+       title = "Debt and credit limit") +
+  geom_smooth(method = "lm", se = FALSE)
+
+ggplot(credit_ch6, aes(x = income, y = debt)) +
+  geom_point() +
+  labs(x = "Income (in $1000)", y = "Credit card debt (in $)", 
+       title = "Debt and income") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+credit_ch6 %>% select(debt, credit_rating, age) %>% skim()
+```
+
+```{r}
+credit_ch6 %>% 
+  select(debt, credit_rating, age) %>% 
+  cor()
+```
+
+```{r}
+ggplot(credit_ch6, aes(x = credit_rating, y = debt)) +
+  geom_point() +
+  labs(x = "Credit rating", y = "Credit card debt (in $)", 
+       title = "Debt and credit rating") +
+  geom_smooth(method = "lm", se = FALSE)
+
+ggplot(credit_ch6, aes(x = age, y = debt)) +
+  geom_point() +
+  labs(x = "Age", y = "Credit card debt (in $)", 
+       title = "Debt and age") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+# Fit regression model:
+debt_model <- lm(debt ~ credit_limit + income, data = credit_ch6)
+# Get regression table:
+get_regression_table(debt_model)
+```
+
+```{r}
+rating_model <- lm(debt ~ credit_rating + age, data = credit_ch6)
+
+get_regression_table(rating_model)
+```
+
+```{r}
+get_regression_points(debt_model)
+```
+
+```{r}
+# Interaction model
+ggplot(MA_schools, 
+       aes(x = perc_disadvan, y = average_sat_math, color = size)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Percent economically disadvantaged", y = "Math SAT Score", 
+       color = "School size", title = "Interaction model")
+```
+
+```{r}
+# Parallel slopes model
+ggplot(MA_schools, 
+       aes(x = perc_disadvan, y = average_sat_math, color = size)) +
+  geom_point(alpha = 0.25) +
+  geom_parallel_slopes(se = FALSE) +
+  labs(x = "Percent economically disadvantaged", y = "Math SAT Score", 
+       color = "School size", title = "Parallel slopes model")
+```
+
+```{r}
+model_2_interaction <- lm(average_sat_math ~ perc_disadvan * size, 
+                          data = MA_schools)
+get_regression_table(model_2_interaction)
+```
+
+```{r}
+model_2_parallel_slopes <- lm(average_sat_math ~ perc_disadvan + size, 
+                              data = MA_schools)
+get_regression_table(model_2_parallel_slopes)
+```
+
+```{r}
+credit_ch6 %>% select(debt, income) %>% 
+  mutate(income = income * 1000) %>% 
+  cor()
+
+```
+

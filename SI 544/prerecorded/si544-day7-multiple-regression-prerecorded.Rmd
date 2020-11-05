@@ -1,0 +1,146 @@
+---
+title: "si544-day7-multiple-regression"
+author: "Your Name (uniqname)"
+date: "10/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+As usual, load all the libraries that we'll need:
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+```
+
+Simplify our dataset:
+
+```{r}
+evals_day7 <- evals %>% select(ID, score, age, gender)
+```
+
+Create a visualization of a linear regression:
+```{r}
+evals_day7 %>% ggplot(mapping=aes(x=age,y=score)) + geom_point() + geom_smooth(method="lm",se = FALSE)
+```
+
+Add the confidence interval:
+
+```{r}
+evals_day7 %>% ggplot(mapping=aes(x=age,y=score)) + geom_point() + geom_smooth(method="lm",se = TRUE)
+```
+
+Create a linear model of score vs. age using a pipeline:
+
+```{r}
+evals_model <- evals_day7 %>% lm(score ~ age, data = .) 
+```
+
+
+```{r}
+get_regression_table(evals_model)
+```
+Now let's separate male and female:
+
+```{r}
+ggplot(evals_day7, aes(x = age, y = score, color = gender)) +
+  geom_point() +
+  labs(x = "Age", y = "Teaching Score", color = "Gender") +
+  geom_smooth(method="lm",se=FALSE)
+```
+
+And let's create a linear model of score vs. age that takes gender into account:
+
+```{r}
+score_model_interaction <- lm(score ~ age * gender, data = evals_day7)
+# Get regression table:
+get_regression_table(score_model_interaction)
+```
+
+Let's look at the residuals:
+
+```{r}
+get_regression_points(score_model_interaction)
+```
+
+Let's take a look at a model that assumes there is no interaction:
+
+```{r}
+
+gg_parallel_slopes(y = "score", num_x = "age", cat_x = "gender", 
+                   data = evals_day7)
+```
+
+Let's create a regression model that does not have an interaction term (note the formula
+uses '+' instead of '*'):
+
+```{r}
+score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_day7)
+get_regression_table(score_model_parallel_slopes)
+```
+
+
+
+```{r}
+library(ISLR)
+```
+
+```{r}
+credit = Credit
+```
+```{r}
+library(skimr)
+```
+
+```{r}
+skim(credit)
+```
+
+
+
+Credit Limit Modeling
+
+Credit balance vs. income
+```{r}
+income_model <- lm(Balance ~ Income, data = credit)
+get_regression_summaries(income_model)
+get_regression_table(income_model)
+
+```
+
+Credit balance vs. credit rating
+```{r}
+rating_model <- lm(Balance ~ Rating, data = credit)
+get_regression_summaries(rating_model)
+get_regression_table(rating_model)
+```
+Credit balance vs. income and limit
+
+```{r}
+income_balance_interaction_model <- lm(Balance ~ Income * Limit, data = credit)
+get_regression_summaries(income_balance_interaction_model)
+get_regression_table(income_balance_interaction_model)
+```
+
+Credit balance vs. income and credit rating and limit
+
+```{r}
+balance_rating_interaction_model <- lm(Balance ~ Income * Rating * Limit, data = credit)
+get_regression_summaries(balance_rating_interaction_model)
+get_regression_table(balance_rating_interaction_model)
+```
+
+
+
+
+
+
+
+
+
+
+

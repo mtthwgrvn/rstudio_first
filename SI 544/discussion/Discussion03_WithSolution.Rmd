@@ -1,0 +1,256 @@
+---
+title: "Discussion section 03 - solution"
+---
+
+
+# Part 1: Walkthrough - refer to existing variables in plaintext
+Suppose you have done some heavy-lifting calculation and would like to refer
+to a variable that you have created in a code chunk. Can Rmarkdown handle it?
+ 
+```{r demo_heavy_calc}
+date_today = Sys.Date()
+date_today
+```
+Then, to refer to the text stored in `date_today`, you can typeset the following 
+sentence using such variable: "Today is `r date_today`". With the same syntax,
+you can even display the content of the variable in a standalone code chunk.
+
+This will be useful in writing answers in plain text, if needed. Once you knit the file, notice how the line written below is displayed.
+
+```
+Today is `r date_today`
+```
+For the next part, do not worry about understanding the code. Focus on the concepts first, we will get to the code later in the semester.
+
+# Part 2: Normal distribution, with mean and standard deviation
+In R, we can use function `rnorm` to obtain random samples from a certain Normal distribution.
+
+## Step 1: simulate a few random variables
+In `df`, we create four columns with different mean and standard deviation.
+Let `Normal(0,1)` denote the "standard normal distribution", with mean 0 and 
+standard deviation 1. In the following chunk, we simulate the distribution of 
+four normal random variables, where:
+* `v01 ~ Normal(0,1)`
+* `v02 ~ Normal(0,2)`
+* `v12 ~ Normal(2,1)`
+
+```{r gen_simulation_result}
+library(ggplot2)
+set.seed(1)
+the_mean <- 0
+the_standard_deviation <- 1
+sim_count = 1000000 # a million simulations
+df <- data.frame(v01 = rnorm(sim_count,
+                            mean = the_mean, 
+                            sd = the_standard_deviation
+                 ), 
+                 v02 = rnorm(sim_count,
+                            mean = the_mean,
+                            sd = the_standard_deviation * 2
+                             ),
+                 v21 = rnorm(sim_count,
+                            mean = the_mean + 2,
+                            sd = the_standard_deviation
+                 ),
+                 v05 = rnorm(sim_count,
+                            mean = the_mean,
+                            sd = the_standard_deviation * 5
+                             )
+                 )
+```
+
+In the simulation above, we repeatedly generated `r sim_count` _realizations_ from
+the Normal distribution, with mean being `r the_mean` and standard deviation 
+being `r the_standard_deviation`.
+
+Take a look at df.
+
+Now, let's take the column v01 and plot a histogram. Remember that the mean for v01 is 0 and the standard deviation is 1.
+```{r plot_standard_normal}
+ggplot(df) + 
+    # v01 is Normal(0, 1)
+    geom_histogram(aes(x = v01),
+                   colour = "black",
+                   bins = 100,
+                   fill = "white") +
+  labs(title="a normal distribution centered at 0 with standard deviation 1") +
+  scale_x_continuous(name = "v01 value", breaks = -5:5)
+```
+
+
+```{r plot_normal_with_different_means}
+ggplot(df) + 
+    # v1 is Normal(0, 1)
+    geom_histogram(aes(x = v01),
+                   colour = "black",
+                   bins = 100,
+                   fill = "white") + 
+    # v21 is Normal(2, 1)
+    geom_histogram(aes(x = v21),
+                   color="red",
+                   bins = 100,
+                   fill = "white", 
+                   ) +
+    geom_vline(xintercept = 0) +
+    geom_vline(xintercept = 2) +
+  labs(title = "2 normal distributions: centered at 0 and at 2, with same standard deviation of 1") +
+  scale_x_continuous(name = "v01 and v21 values", breaks = -5:7)
+```
+
+```{r plot_normal_with_different_std}
+ggplot(df) + 
+    # v01 is Normal(0, 1)
+    geom_histogram(aes(x = v01),
+                   colour = "black",
+                   bins = 100,
+                   fill = "white") + 
+    # v02 is Normal(0, 2)
+    geom_histogram(aes(x = v02),
+                   color="red",
+                   bins = 100,
+                   fill = "white", 
+                   )+
+    # v05 is Normal(0, 5)
+    geom_histogram(aes(x = v05),
+                   color="blue",
+                   bins = 100,
+                   fill = "white",
+                   )+
+  labs(title = "3 distributions with different standard deviations but the same mean") +
+scale_x_continuous(name="v01, v02, v05 values", breaks = -12:12 *2 )
+```
+
+## Density of Normal distribution
+Mathematically, we have an exact representation of the Normal distribution. 
+In R, function `dnorm` represents such "bell-shaped curve".
+
+```{r}
+ggplot(df, aes(x = v01)) + 
+geom_histogram(aes(y =..density..),
+               colour = "black",
+               bins = 100,
+               fill = "white") +
+    stat_function(fun = dnorm, args = list(mean = mean(df$v01), sd = sd(df$v01)), color="red") +
+    geom_vline(xintercept = sd(df$v01), color='blue') +
+    geom_vline(xintercept = - sd(df$v01), color='blue') +
+    geom_vline(xintercept = sd(df$v01) * 2, color='red') +
+    geom_vline(xintercept = - sd(df$v01) * 2, color='red')
+```
+
+# Part 3: more data manipulation exercises
+
+## Load state level data by Sunday, 2020-09-20
+```{r}
+#install the package COVID19 and dplyr in your console [if you do not already have it in your environment]
+#load it
+library("COVID19")
+library("dplyr")
+library("ggplot2")
+
+#get state level data for US
+US_statelevel_cases = covid19(country = "US", level = 2)
+
+#filter state level data for US to include data only up to Sunday, Sep 20, 2020
+US_statelevel_bySunday = US_statelevel_cases %>%
+  filter(date<="2020-09-20")
+```
+
+## Total number of confirmed cases for each state
+For this part, we will get the total number of confirmed cases for each state.
+```{r}
+#get the total number of confirmed cases for each state
+State_wise_cases_1 = US_statelevel_cases %>%
+  group_by(administrative_area_level_2) %>% #group by states
+  summarize(total_confirmed = max(confirmed, na.rm = TRUE)) #each day's confirmed cases represent the cumulative count, get the max confirmed count for each state  
+
+State_wise_cases_1
+
+#you can also get the same data by running the following code
+State_wise_cases_2 = US_statelevel_cases %>%
+  group_by(administrative_area_level_2) %>% #group by states
+  filter(date == max(date)) %>% #because confirmed cases is a cumulative count, the last date in your date range represents cases up to that date
+  select(administrative_area_level_2, total_confirmed = confirmed) %>%
+  arrange(administrative_area_level_2)
+
+State_wise_cases_2
+
+```
+
+## Calculate the Median of total confirmed cases
+
+Notes on using `summarise()` function:
+1. Don't worry about the following warning message: 
+```
+`summarise()` ungrouping output (override with `.groups` argument)
+```
+2. `summarize()` function generates a new dataframe, and
+3.  when using `summarize()`, always give names to the new columns in the new dataframe
+```{r}
+# Get the median number of confirmed cases
+State_median = US_statelevel_bySunday %>%
+  group_by(administrative_area_level_2) %>%
+  summarize(total_confirmed = max(confirmed, na.rm = TRUE)) %>% #get total confirmed like the above chunk
+  summarize(median(total_confirmed, na.rm = TRUE)) #on the new column (total_confirmed), calculate the median
+
+# The result has a column with a weird name, rename it
+# Create a new column with proper variable name:
+State_median$median = State_median$`median(total_confirmed, na.rm = TRUE)`
+
+State_median
+
+```
+The median of the confirmed cases among all the states is `r State_median$median`.
+
+
+### Collecting what we needed
+```{r}
+succinct_df = State_median[c('median')]
+succinct_df
+```
+
+### Exercise: 2: reproduce the succinct_df
+```{r}
+# Try to reuse most of the code above and reproduce the succinct_df
+# You can also get the same data by filtering the data for the latest date.
+State_median = US_statelevel_bySunday %>%
+  group_by(administrative_area_level_2) %>%
+  summarize(total_confirmed = max(confirmed, na.rm = TRUE)) %>% #get total confirmed like above
+  summarize(median = median(total_confirmed, na.rm = TRUE)) #on the new column (total_confirmed), calculate the median
+State_median
+
+```
+### How about this quick answer?
+```{r}
+# Median of the confirmed cases among the states?
+median(US_statelevel_bySunday$confirmed, na.rm=TRUE)
+# What went wrong? Take a quick look at the dataframe:
+# View(US_statelevel_bySunday) 
+```
+
+## Ordered barplot? Can we organize the x-axis by column height?
+Plot the bar chart of confirmed cases for each state arranged in ascending/increasing order
+```{r}
+# Below, we are ordering the cases in the plot using the data set "State_wise_cases_1" that we created above
+ggplot(State_wise_cases_1, aes(x=reorder(administrative_area_level_2,total_confirmed), y=total_confirmed))+
+  geom_col()+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  geom_hline(yintercept = State_median$median, color="blue")+
+  labs(title = "chart created with an unordered data set but ordered while plotting")
+```
+
+### Exercise 3: reproduce the ordered barplot
+```{r}
+# Alternate way
+# Need to reconstruct the state-column as a "factor" variable, with `factor` function along with its `levels` argument
+# Ref: https://rstudio-pubs-static.s3.amazonaws.com/7433_4537ea5073dc4162950abb715f513469.html
+State_wise_cases_1 %>% 
+  mutate(state_ordered = 
+           factor(administrative_area_level_2, 
+                  levels = administrative_area_level_2[order(total_confirmed)])
+         )  %>%
+  ggplot() +
+  geom_col(mapping = aes(x = state_ordered, y = total_confirmed))+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  geom_hline(yintercept = State_median$median, color="blue")+
+  labs(caption = "chart created by first creating an odered data set and then plotting")
+```

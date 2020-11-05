@@ -1,0 +1,458 @@
+---
+title: 'SI 544 Day 2: Visualization'
+author: "Matthew Garvin (mgarvin)"
+date: "9/11/2020"
+output: html_document
+version: 2.0
+---
+
+## Day 2: Libraries
+
+Before we get started, let's load the libraries that we'll need for today:
+
+```{r loadlibraries}
+
+library(nycflights13)
+library(ggplot2)
+library(dplyr)
+library(gapminder)
+library(knitr)
+library(readr)
+library(tidyverse)
+
+```
+
+## Gapminder
+
+Here's the code to load the Gapminder data.  
+Note that we are filtering the data so we only get the data from the year 2007, and then we drop the year column (why?).
+We also rename some columns so that they're easier to deal 
+with in the code. For example, we use lowercase for the variable names and we also drop the spacesin the variable names.
+
+
+```{r gapminder}
+
+gapminder_2007 <- gapminder %>% 
+  filter(year == 2007) %>% 
+  select(-year) %>% 
+  rename(
+    Country = country,
+    Continent = continent,
+    `Life Expectancy` = lifeExp,
+    `Population` = pop,
+    `GDP per Capita` = gdpPercap
+  )
+```
+
+You might want to View(gapminder_2007) in the Console.
+
+```{r}
+ggplot(data = gapminder_2007, 
+       mapping = aes(x = `GDP per Capita`, 
+                     y = `Life Expectancy`, 
+                     size = Population, 
+                     color = Continent)) +
+  geom_point() +
+  labs(x = "GDP per capita", y = "Life expectancy")
+```
+
+## Scatterplots
+
+```{r}
+alaska_flights <- flights %>% 
+  filter(carrier == "AS")
+```
+
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + 
+  geom_point()
+```
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + 
+  geom_point() +
+  labs(caption="Arrival delays vs departure delays for Alaska Airlines flights from NYC in 2013.")
+```
+
+## Learning Check (LC3.2)
+What are some practical reasons why dep_delay and arr_delay have a positive relationship?
+
+INSERT YOUR ANSWER HERE
+If a flight has a departure delay, it is likely to have an arrival delay as well.
+
+## Learning Check (LC3.5)
+What are some other features of the plot that stand out to you?
+
+INSERT YOUR ANSWER HERE
+What stands out to me more is the lack of features. Is the delay in minutes? That's not clear. But I notice the caption and that is helpful compared to the previous plot.
+
+Overplotting
+
+If you don't create a geom layer, you don't get much:
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay))
+```
+
+
+## Addressing Overplotting
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + 
+  geom_point(alpha = 0.2)
+```
+
+
+Let's look at jitter (and introduce tibbles at the same time):
+
+
+```{r}
+jitter_example <- tibble(
+  x = c(0, 0, 0, 0),
+  y = c(0, 0, 0, 0)
+)
+jitter_example
+```
+
+
+```{r}
+ggplot(data = jitter_example, mapping = aes(x = x, y = y)) + 
+  geom_point() + 
+  coord_cartesian(xlim = c(-0.025, 0.025), ylim = c(-0.025, 0.025)) + 
+  labs(title = "Regular scatterplot")
+```
+
+```{r}
+ggplot(data = jitter_example, mapping = aes(x = x, y = y)) + 
+  geom_jitter(width = 0.01, height = 0.01) +
+  coord_cartesian(xlim = c(-0.025, 0.025), ylim = c(-0.025, 0.025)) + 
+  labs(title = "Jittered scatterplot")
+
+```
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + 
+  geom_jitter(width = 30, height = 30) +
+  labs(caption="Arrival vs departure delays jittered scatterplot.")
+```
+
+## Scatterplot of our questionnaire data
+First, let's load our questionnaire data file using the read.csv function:
+
+```{r day2scatterplotquestionnaire}
+q <- read.csv('https://raw.githubusercontent.com/umsi-data-science/si544-fa2020/master/544fa2019questionnaire.csv')
+```
+
+Now, let's look at a plot of enthusiasm as a function of anxiety:
+
+```{r}
+ggplot(data=q, mapping=aes(x = anxiety, y=enthusiasm)) + geom_point()
+```
+
+Which of "alpha" and "jitter" do you think would be better?
+
+Let's try both:
+```{r}
+ggplot(data=q, mapping= aes(x = anxiety, y=enthusiasm)) + geom_point(alpha=0.2)
+ggplot(data=q, mapping= aes(x = anxiety, y=enthusiasm)) + geom_jitter()
+```
+
+## Learning Check (LC544.3.1)
+
+Which of alpha and jitter gave the better results?  Why?
+
+INSERT YOUR ANSWER HERE
+I think alpha is better because jitter seems to misrepresent the data. Of course, if we tone the jitter down a bit it will probably provide better results. Ultimately, given the context, there's probably strengths and weaknesses to both.
+
+## Linegraphs
+
+Let's load and filter some data:
+
+```{r day2linegraphs}
+early_january_weather <- weather %>% 
+  filter(origin == "EWR" & month == 1 & day <= 15)
+```
+
+## Learning Check (LC544.3.2)
+
+What does the previous chunk do?
+
+INSERT YOUR ANSWER HERE
+It creates a variable that filters weather data to only flights originating from Newark 'EWR' from the first half of January.
+
+
+```{r}
+ggplot(data = early_january_weather, mapping = aes(x = time_hour, y = temp)) +
+  geom_line() +
+  labs(caption="Hourly temperature in Newark for January 1-15, 2013.")
+```
+
+Now let's do the same for our questionnaire data:
+
+```{r}
+ggplot(data=q, mapping=aes(x = timestamp, y=enthusiasm)) + geom_line()
+
+```
+
+Not really helpful, is it?  Let's convert the string values of dates to something a bit 
+more numeric using POSIXct (POSIX calendar time; POSIX can be thought of as a 
+"flavor" of Unix):
+
+```{r}
+q$ts = as.POSIXct(q$timestamp, format="%m/%d/%Y %H:%M:%S")
+ggplot(data=q, mapping=aes(x = ts, y=enthusiasm)) + geom_line()
+```
+## Learning Check (LC544.3.3)
+What can you say about the expression of enthusiasm during the time the questionnaire was administered?
+
+INSERT YOUR ANSWER HERE.
+It appears to have a greater variation spread between greater and lesser degrees of enthusiasm
+
+## Histograms
+
+NOTE: You might want to use the console to View(weather)
+
+```{r}
+ggplot(data = weather, mapping = aes(x = temp, y = factor("A"))) +
+  geom_point() +
+  theme(axis.ticks.y = element_blank(), 
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(caption = "Hourly Temperature Recordings from NYC in 2013")
+```
+
+Let's "raise" the vertical dimension according to the counts of things in bins:
+
+```{r}
+## ----weather-histogram, warning=TRUE, fig.cap="Histogram of hourly temperatures at three NYC airports."----
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram() +
+  labs(caption = "Hourly temperatures at three NYC airports")
+```
+
+
+Make things a bit clearer:
+
+```{r}
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram(color = "white")
+```
+
+And perhaps a bit prettier:
+
+```{r}
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram(color = "white", fill = "steelblue")
+```
+
+Let's see what happens if we change the number of bins:
+
+```{r}
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram(bins = 40, color = "white") +
+  labs(caption="Histogram with 40 bins")
+```
+
+Instead of specifying the number of bins, we can specify the width of each bin:
+
+```{r}
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram(binwidth = 10, color = "white") +
+  labs(caption="Histogram with binwidth 10.")
+```
+
+
+## Learning Check (LC3.16) What would you guess is the “center” value in this distribution? Why did you make that choice?
+
+INSERT YOUR ANSWER HERE
+I'm guessing 57. I think the peak around 35 pulls the distribution closer to 50.
+
+
+## Faceting
+
+```{r}
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram(binwidth = 5, color = "white") +
+  facet_wrap(~ month) +
+  labs(caption="Faceted histogram of hourly temperatures by month.")
+```
+
+```{r}
+## ----facethistogram2, fig.cap="Faceted histogram with 4 instead of 3 rows."----
+ggplot(data = weather, mapping = aes(x = temp)) +
+  geom_histogram(binwidth = 5, color = "white") +
+  facet_wrap(~ month, nrow = 4) +
+  labs(caption="Faceted histogram with 4 instead of 3 rows.")
+```
+
+
+## Boxplots
+
+Let's start with a bit of a problem:
+
+```{r}
+ggplot(data = weather, mapping = aes(x = month, y = temp)) +
+  geom_boxplot()
+```
+
+
+```{r}
+ggplot(data = weather, mapping = aes(x = factor(month), y = temp)) +
+  geom_boxplot()
+```
+
+
+## Learning Check (LC3.23) Which months have the highest variability in temperature? What reasons can you give for this?
+
+INSERT YOUR ANSWER HERE
+April, May and October. The whiskers protrude the furthest. Alternatively, I'm wondering if my focus should be on the actual box? In which case this would be November.
+
+## Barplots
+
+Two types of data: pre-counted vs. not pre-counted.  See the following tibbles for an example:
+
+```{r}
+fruits <- tibble(
+  fruit = c("apple", "apple", "orange", "apple", "orange")
+)
+fruits_counted <- tibble(
+  fruit = c("apple", "orange"),
+  number = c(3, 2)
+)
+
+```
+
+```{r}
+fruits
+```
+
+```{r}
+fruits_counted
+```
+
+
+Use geom_bar when elements are not pre-counted:
+
+```{r}
+## ----geombar, fig.cap="Barplot when counts are not pre-counted.", fig.height=2.5----
+ggplot(data = fruits, mapping = aes(x = fruit)) +
+  geom_bar() +
+  labs("Barplot when counts are not pre-counted.")
+```
+
+Use geom_col() when counts are pre-counted:
+
+```{r}
+ggplot(data = fruits_counted, mapping = aes(x = fruit, y = number)) +
+  geom_col() +
+  labs(caption="Barplot when counts are pre-counted.")
+```
+
+
+Let's take a look at our flights data:
+
+```{r}
+ggplot(data = flights, mapping = aes(x = carrier)) +
+  geom_bar()
+```
+
+
+```{r}
+flights_table <- flights %>% 
+  group_by(carrier) %>% 
+  summarize(number = n())
+```
+
+Take a look at flights_table, the run the following chunk:
+
+```{r}
+ggplot(data=flights_table, mapping = aes(x=carrier, y=number)) + geom_col()
+```
+
+## Learning Check (LC3.27) What is the difference between histograms and barplots?
+
+INSERT YOUR ANSWER HERE
+
+
+## Learning Check (LC544.3) Run the following code to create a bar chart for the grades from our survey.  Explain how the second chart differs from the first.
+
+
+```{r}
+ggplot(data=q, mapping = aes(x=grade)) + 
+  geom_bar()
+ggplot(data=q, mapping = aes(x=factor(grade, levels=c('A','A-','B+','B','B-')))) + 
+  geom_bar() +
+  labs(x="Grade")
+```
+
+INSERT YOUR ANSWER HERE
+The second graph puts the grades in a specific order.
+
+## A word about pie charts
+
+DON'T!
+
+```{r}
+ggplot(flights, mapping = aes(x = factor(1), fill = carrier)) +
+  geom_bar(width = 1) +
+  coord_polar(theta = "y") +
+  theme(axis.title.x = element_blank(), 
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()) +
+  guides(fill = guide_legend(keywidth = 0.8, keyheight = 0.8))
+
+```
+
+There are better ways to handle these data; typically using barplots.
+
+## Barplots for 2
+
+```{r}
+ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
+  geom_bar() +
+  labs(caption="Stacked barplot comparing the number of flights by carrier and origin.")
+```
+
+
+```{r}
+ggplot(data = flights, mapping = aes(x = carrier, color = origin)) +
+  geom_bar() +
+  labs(caption="Stacked barplot with color aesthetic used instead of fill.")
+```
+
+
+
+
+```{r}
+ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
+  geom_bar(position = "dodge") +
+  labs(caption="Side-by-side (AKA dodged) barplot comparing the number of flights by carrier and origin.")
+```
+
+
+
+
+```{r}
+ggplot(data = flights, mapping = aes(x = carrier)) +
+  geom_bar() +
+  facet_wrap(~ origin, ncol = 1) +
+  labs(caption="Faceted barplot comparing the number of flights by carrier and origin.")
+```
+
+
+## Learning Check (LC3.30) Why should pie charts be avoided and replaced by barplots?
+
+INSERT YOUR ANSWER HERE
+
+## Learning Check (LC3.31) Why do you think people continue to use pie charts?
+
+INSERT YOUR ANSWER HERE
+
+END OF NOTEBOOK!
+
+Please remember to Knit this notebook into HTML and submit the HTML version via Canvas.

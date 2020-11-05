@@ -1,0 +1,207 @@
+---
+title: "Problem Set 3 - Boston"
+author: "Matthew Garvin uniqname: mgarvin"
+date: "11/15/2019"
+output: html_document
+---
+
+## Introduction
+
+The total score for this assignment will be 80 points, equally split between 8 questions.
+  
+As in lecture and discussion, there are several ways to approach and answer these questions! There may not be a "best solution", but instead a variety of ways to interpret and analyze a given task. Be thoughtful in your responses below your code to explain why you chose the methods and representations in your analysis when prompted for a response.
+
+
+## The Data
+
+The dataset for this assignment was gathered in 1970 in the Boston metropolitan area. Each row corresponds to one US Census tract. These are geographic areas with a few thousand people used by the U.S. government in it's decennial census of the population. (The help menu entry refers to "towns" in a few places. These should read "census tracts".)
+The dataset is the Boston dataset in the MASS package, and you can get more information by using the command help(boston, package=MASS).
+
+Note that the set of entries here is _not_ a sample of a larger population of Boston census tracts. It represents all census tracts in Boston (Though each entry itself may be a sample of the larger population in that tract.) We also can not say that Boston represents the entire US, since regions differ. For our purposes, let us assume that these census tracts are a sample of all census tracts in urban areas in the northeastern United States.
+
+```{r}
+## First load some packages and the data. You may have to install the MASS package first.
+## Also, note the package load order matters here. MASS and dplyr both have a select function. If you want to use dplyr's select, we need to run it last.
+library(MASS)
+library(tidyverse)
+library(skimr)
+library(infer)
+library(moderndive)
+library(corrplot)
+library(reshape2)
+boston <- Boston
+```
+
+
+
+### Question 1 (10 Points)
+Take a look at the data using one or more of the exploratory data analysis tools and techniques that you've learned in SI 544. Make sure to look at the help menu to understand the variables.
+
+Describe the shape of the distribution of the per capita crime rates. What does this say about crime and geography in Boston?
+```{r}
+summary(boston)
+
+glimpse(boston)
+
+skim(boston)
+
+boston %>% summary(crim)
+
+boston %>% summarise(mean(tax/10000), sd(tax/10000))
+
+ggplot(boston, aes(x = crim))+
+  geom_histogram(bins = 10, color = "white")+
+  labs(x = "crime rate")
+
+cm_boston <- cor(boston)
+corrplot(cm_boston, type = "upper")
+
+bosmelt <- melt(boston, id="crim")
+ggplot(bosmelt, aes(value, crim))+
+  facet_wrap(~variable, scales = "free")+
+  geom_point()
+
+```
+
+#### Q1 Response
+This distribution is positively skewed, with most frequent scores being low and the tail toward the high end. This indicates that there is more crime in some geographic areas than others.
+
+
+### Question 2 (10 Points)
+
+Use bootstrapping with the percentile method to compute a 95% confidence interval for the average pupil-teacher ratio in urban, northeastern United States. Interpret your results in a complete sentence that a non-statistician would understand.
+
+```{r}
+boston %>% 
+  summarise(mean(ptratio))
+
+bd <- boston %>% 
+  specify(response = ptratio) %>% 
+  generate(reps = 1000) %>% 
+  calculate(stat = "mean")
+
+visualize(bd)
+
+pci <- bd %>% 
+  get_confidence_interval(level = 0.95, type = "percentile")
+pci
+
+visualize(bd)+
+  shade_confidence_interval(endpoints = pci)+
+  geom_vline(xintercept = 18.46, linetype = "dashed")
+```
+
+#### Q2 Response
+Based on a sample of 1000, we can say with 95% certainty, that there are about 18 students per teacher in urban, northeastern United States.
+
+
+
+### Question 3 (10 Points)
+
+Assume that urban northeastern US property tax rates are currently around 1.054%. (Actually, this is Boston. Just go with it.) We would like to know if urban northeastern US property tax rates are higher today than they were in 1970.
+
+Describe a hypothesis test to examine this question. What are your null and alternative hypotheses? What is the cut-off for a p-value that you will use to reject the null?
+
+#### Q3 Response
+
+Null Hypothesis: H0: μ = 1.054%
+
+Alternative Hypothesis: HA: μ > 1.054%
+
+Cut-off p-value (alpha): 0.05
+
+
+
+### Question 4 (10 Points)
+Use the traditional method, with a test-statistic, to calculate the p-value for the hypothesis test you wrote out in Question 4. Write your conclusion in a few complete sentences that would make sense to a random Boston citizen.
+
+```{r}
+tax_model <- lm(tax ~ medv, data = boston)
+ #Get regression table:
+get_regression_table(tax_model)
+
+past_tax <- boston %>%
+  select(tax, medv)
+
+past_rate <- past_tax %>% 
+  summarise("rate" = medv / tax)
+
+pr <- past_rate %>% 
+  summarise("mean" = mean(rate), "stan_dev" = sd(rate))
+
+
+  summarise("mean" = mean(tax), "stan_dev" = sd(tax))
+#current_rate <- 0.1054
+  #t.test(y=mean(tax) , mu=0.1054) # Ho: mu=3
+
+```
+
+#### Q4 Response
+
+
+
+### Question 5 (10 Points)
+
+Use the infer package to calculate the p-value for the hypothesis test you wrote out in Question 4. Write your conclusion in a few complete sentences that would make sense to a random Boston citizen. Hint: Look at the ModernDive textbook, Appendix B.2.4.
+
+```{r}
+current_rates <- 0.1054
+
+nd <- boston %>% 
+  specify (response = tax) %>% 
+  hypothesize(null = "point", mu = 1.054) %>% 
+  generate(reps = 1000, type = "permute") %>% 
+  calculate(stat = "mean")
+
+```
+
+#### Q5 Response
+
+
+
+### Question 6 (10 Points)
+
+Now we are curious about what traits are related to high-crime areas. Run a regression that predicts per capita crime rate based on the following variables: zn, chas, nox, rm, age, dis, and rad. 
+
+(a) Make sure that your regression table or regression summary is visible in your  output. (b) Which variables don't seem to be (statistically significantly) related to per capita crime rates? Write your answer in sentences that would make sense to a random Boston citizen. (c) What is the R^2 value?
+
+```{r}
+hc_areas <- 
+
+```
+
+#### Q6 Response
+
+
+
+### Question 7 (10 Points)
+
+Remember how the distribution of per capita crime looked? This means that the data is right-skewed. In cases like this we might try log-transforming the data. If we find a stronger statistical relationship with the log-transformed data, then there might be an exponential process that generated the original data. (Because logarithms undo exponents.) 
+For example if you suspect that the relationship between variables $x_1$, $x_2$ and $y$ is $y=a * b_1^{x_1} * b_2^{x_2}$, then the log-transformed equation is $log(y)=log(a)+x_1*log(b_1) + x_2 * log(b_2)$ or, rewriting the constants, $log(y)=A + B_1x_1 + B_2 x_2$. So $x_1$, $x_2$ and log(y) will be linearly related, and we can do a linear regression.
+For more more details on logarithms, you can check out:
+https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/statistics-definitions/logarithms/
+
+Create a new variable in the boston data frame called log_crim. This should be the natural logarithm of the per capita crime rate. Then run the regression that you ran in the previous problem, except replace crim with log_crim.
+
+(a) Make sure that your regression table or regression summary is visible in your knit document. (b) Which variables don't seem to be (statistically significantly) related to the logarithm of per capita crime rates? Write your answer in sentences that would make sense to a random Boston citizen.
+
+```{r}
+
+```
+
+#### Q7 Response
+
+
+
+### Question 8 (10 points)
+
+Compare the R^2 values of the two regressions from Q7 and Q8. Which regression seems to have a stronger relationship? Should we use crim or log_crim in future analysis? (You should also be able to support your explanation by looking at graphs of the residuals for each regression. Though you don't have to do that here.)
+
+```{r}
+
+```
+
+
+#### Q8 Response
+
+

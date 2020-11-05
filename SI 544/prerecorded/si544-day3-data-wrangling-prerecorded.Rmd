@@ -1,0 +1,413 @@
+
+---
+title: "si544-day3-data-wrangling-prerecorded"
+author: "Chris Teplovs"
+date: "9/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First, let's load the libraries we'll need:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(nycflights13)
+library(fivethirtyeight)
+```
+
+## Pipes
+
+```{r}
+values <- c(1,2,3)
+```
+
+Usual approach is to pass the data frame as an argument, that is:
+
+```{r}
+sum(values)
+```
+
+Using pipes, we can say "take values then apply sum":
+
+```{r}
+values %>% sum
+```
+
+## Filtering
+
+(You might want to View(flights) in the Console.)
+
+```{r}
+alaska_flights <- flights %>%
+   filter(carrier == "AS")
+```
+
+
+
+```{r}
+portland_flights <- flights %>%
+   filter(dest == "PDX")
+```
+
+```{r}
+btv_sea_flights_fall <- flights %>%
+   filter(origin == "JFK" & (dest == "BTV" | dest == "SEA") & month >= 10)
+```
+
+We can use ',' instead of '&':
+
+```{r}
+btv_sea_flights_fall <- flights %>%
+   filter(origin == "JFK", (dest == "BTV" | dest == "SEA"), month >= 10)
+```
+
+Lots of '|' (or) operators:
+```{r}
+many_airports <- flights %>%
+ filter(dest == "BTV" | dest == "SEA" | dest == "PDX" |
+        dest == "SFO" | dest == "BDL")
+```
+
+The '%in%' operator can replace lots of '|' operators:
+```{r}
+many_airports <- flights %>%
+ filter(dest %in% c("BTV", "SEA", "PDX", "SFO", "BDL"))
+```
+
+# Summarization
+
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp), std_dev = sd(temp))
+summary_temp
+```
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_temp
+```
+
+# Grouping
+
+```{r}
+summary_monthly_temp <- weather %>% 
+  group_by(month) %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_monthly_temp
+
+```
+
+Note that group_by doesn't change the data.frame, only the information about the data.frame:
+
+```{r}
+diamonds
+```
+
+
+```{r}
+diamonds %>% 
+  group_by(cut)
+```
+
+```{r}
+diamonds %>% 
+  group_by(cut) %>% 
+  summarize(avg_price = mean(price))
+```
+
+
+```{r}
+by_origin <- flights %>% 
+  group_by(origin) %>% 
+  summarize(flight_count = n())
+by_origin
+```
+
+Grouping can also be done for multiple (nested) variables.  For example to group by origin and then by month:
+
+```{r}
+by_origin_monthly <- flights %>% 
+  group_by(origin, month) %>% 
+  summarize(count = n())
+by_origin_monthly
+```
+
+Note that the following will not work properly:
+
+```{r}
+
+by_origin_monthly_incorrect <- flights %>% 
+  group_by(origin) %>% 
+  group_by(month) %>% 
+  summarize(count = n())
+by_origin_monthly_incorrect
+```
+
+## Mutating
+
+Creating new variables based on existing ones.
+
+```{r}
+weather <- weather %>% 
+  mutate(temp_in_C = (temp - 32) / 1.8)
+```
+```{r}
+library(magrittr)
+```
+```{r}
+weather <- weather %>% 
+  mutate(temp_in_C = temp %>% subtract(32) %>% divide_by(1.8))
+```
+
+```{r}
+summary_monthly_temp <- weather %>% 
+  group_by(month) %>% 
+  summarize(mean_temp_in_F = mean(temp, na.rm = TRUE), 
+            mean_temp_in_C = mean(temp_in_C, na.rm = TRUE))
+summary_monthly_temp
+```
+
+Calculate a new variable "gain" that is the the difference of dep_delay and arr_delay:
+
+```{r}
+flights <- flights %>% 
+  mutate(gain = dep_delay - arr_delay)
+```
+
+
+
+```{r}
+gain_summary <- flights %>% 
+  summarize(
+    min = min(gain, na.rm = TRUE),
+    q1 = quantile(gain, 0.25, na.rm = TRUE),
+    median = quantile(gain, 0.5, na.rm = TRUE),
+    q3 = quantile(gain, 0.75, na.rm = TRUE),
+    max = max(gain, na.rm = TRUE),
+    mean = mean(gain, na.rm = TRUE),
+    sd = sd(gain, na.rm = TRUE),
+    missing = sum(is.na(gain))
+  )
+gain_summary
+```
+
+
+```{r}
+ggplot(data = flights, mapping = aes(x = gain)) +
+  geom_histogram(color = "white", bins = 20) +
+  labs(caption="Histogram of gain variable")
+```
+
+
+
+```{r}
+flights <- flights %>% 
+  mutate(
+    gain = dep_delay - arr_delay,
+    hours = air_time / 60,
+    gain_per_hour = gain / hours
+  )
+```
+
+
+
+# Sorting (arrange)
+
+```{r}
+freq_dest <- flights %>% 
+  group_by(dest) %>% 
+  summarize(num_flights = n())
+freq_dest
+```
+
+```{r}
+freq_dest %>% 
+  arrange(num_flights)
+```
+
+```{r}
+freq_dest %>% 
+  arrange(desc(num_flights))
+```
+
+
+
+## Joining (inner_join)
+
+
+```{r}
+flights_joined <- flights %>%
+ inner_join(airlines, by = "carrier")
+``` 
+
+
+
+
+
+```{r}
+flights_with_airport_names <- flights %>%
+ inner_join(airports, by = c("dest" = "faa"))
+``` 
+
+
+```{r}
+named_dests <- flights %>%
+  group_by(dest) %>%
+  summarize(num_flights = n()) %>%
+  arrange(desc(num_flights)) %>%
+  inner_join(airports, by = c("dest" = "faa")) %>%
+  rename(airport_name = name)
+named_dests
+```
+
+```{r}
+flights_weather_joined <- flights %>%
+ inner_join(weather, by = c("year", "month", "day", "hour", "origin"))
+```
+
+```{r}
+joined_flights <- flights %>%
+ inner_join(airlines, by = "carrier")
+```
+
+
+## Selecting
+
+```{r}
+flights %>%
+ select(carrier, flight)
+```
+
+```{r}
+flights_no_year <- flights %>%
+ select(-year)
+```
+
+
+```{r}
+flight_arr_times <- flights %>%
+ select(month:day, arr_time:sched_arr_time)
+```
+
+
+```{r}
+flights_reorder <- flights %>%
+ select(year, month, day, hour, minute, time_hour, everything())
+```
+
+```{r}
+flights_begin_a <- flights %>%
+ select(starts_with("a"))
+```
+
+```{r}
+flights_delays <- flights %>%
+  select(ends_with("delay"))
+```
+
+
+```{r}
+flights_time <- flights %>%
+ select(contains("time"))
+```
+
+## Renaming
+
+```{r}
+flights_time_new <- flights %>%
+ select(contains("time")) %>%
+ rename(departure_time = dep_time,
+        arrival_time = arr_time)
+```
+
+
+## Importing
+
+We saw last week that we can load a CSV file:
+
+```{r}
+q <- read.csv('544fa2019questionnaire.csv')
+```
+
+Note that we can also read directly from a URL, in this case it's a CSV published from a Google Sheets file:
+
+```{r}
+hw <- read.csv('https://bit.ly/2kPxxS3')
+```
+
+Note that R can also read Excel files directly.  See the textbook for details.
+
+## Tidying
+
+```{r}
+library(fivethirtyeight)
+```
+
+```{r}
+drinks
+```
+
+```{r}
+drinks_smaller <- drinks %>% 
+  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>% 
+  select(-total_litres_of_pure_alcohol) %>% 
+  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
+drinks_smaller
+```
+
+```{r}
+drinks_smaller_tidy <- drinks_smaller %>% 
+  gather(key = type, value = servings, c(beer, spirit, wine))
+drinks_smaller_tidy
+```
+
+```{r}
+ggplot(drinks_smaller_tidy, 
+       aes(x = country, y = servings, fill = type)) +
+  geom_col(position = "dodge")
+```
+
+END OF NOTEBOOK
+
+``` {r}
+library(corrgram)
+library(corrplot)
+#creating 'hours' column and making sure that hours are only from
+#00:00 hrs to 23:00 hrs which is exactly as the 'weather' data set has.
+#this will help us join the 2 data sets properly.
+flights$hour <- ifelse(flights$hour == 24, 0, flights$hour)
+
+#JOining the 'flights' and 'weather' datasets based on unique identifiers.
+flights_weather <- left_join(flights, weather)
+
+#We create a 'delays' column that is addition of all the delays in
+#arrival and departure (Consider only positive delays. Reason stated in
+#1st problem solution)
+flights_weather$arr_delay <- ifelse(flights_weather$arr_delay >= 0,
+                                    flights_weather$arr_delay, 0)
+flights_weather$dep_delay <- ifelse(flights_weather$dep_delay >= 0,
+                                    flights_weather$dep_delay, 0)
+flights_weather$total_delay <- flights_weather$arr_delay + flights_weather$dep_delay
+
+ 
+#creating a data with only delay and weather columns. Removing origin, date/time
+#because we want a correlation between delay and the particular weather condition.
+cor_data <- select(flights_weather, total_delay, temp, dewp, humid,
+                   wind_dir, wind_speed, wind_gust, precip, pressure, visib)
+
+#WE first plot a correlation Matrix using corrplot to find the variables that
+#are correlated. We create a correlation matrix using 'cor' function
+corrplot(cor(na.omit(cor_data)), method = "circle", type = "upper",
+         tl.srt = 25, tl.col = "Black", tl.cex = 1, title = "Correlation
+         between all 'weather' variables & 'delay'", mar =c(0, 0, 4, 0) + 0.1)
+```

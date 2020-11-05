@@ -1,0 +1,197 @@
+---
+title: "Problem Set 3 - Basic Regression"
+author: "Matthew Garvin"
+uniqname: "mgarvin"
+date: "10/9/2020"
+output: html_document
+---
+
+The data set for this Problem Set (from https://www.kaggle.com/abcsds/pokemon) includes 721 Pokemon, including their number, name, first and second type, and basic stats: HP, Attack, Defense, Special Attack, Special Defense, and Speed. 
+
+This are the raw attributes that are used for calculating how much damage an attack will do in the games. This dataset is about the pokemon games (NOT pokemon cards or Pokemon Go).
+
+The data as described by Myles O'Neill is:
+
+id_number: ID for each pokemon
+name: Name of each pokemon
+type1: Each pokemon has a type, this determines weakness/resistance to attacks
+type2: Some pokemon are dual type and have 2
+total: sum of all stats that come after this, a general guide to how strong a pokemon is
+hp: hit points, or health, defines how much damage a pokemon can withstand before fainting
+attack: the base modifier for normal attacks (eg. Scratch, Punch)
+defense: the base damage resistance against normal attacks
+sp_attack: special attack, the base modifier for special attacks (e.g. fire blast, bubble beam)
+sp_defense: the base damage resistance against special attacks
+speed: determines which pokemon attacks first each round
+
+The data for this table has been acquired from several different sites, including:
+
+pokemon.com
+pokemondb
+bulbapedia
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+```
+
+```{r}
+pokemon <- read_csv('https://raw.githubusercontent.com/umsi-data-science/data/main/pokemon.csv')
+```
+
+## Q1 (5 points) Use Glimpse, skim, etc. to get a "feel" for the data.
+
+```{r}
+# Insert your code here
+glimpse(pokemon)
+
+pokemon %>% 
+  skim()
+```
+
+## Q2: (5 points) Use faceted histograms to show the distribution of hp for each value of type1. 
+
+```{r}
+# Insert your code here
+ggplot(pokemon, aes(x=hp))+
+  geom_histogram()+
+  labs(x = "Hit Points", y = "Type", title = "Histogram of the distribution of hit points per Pokemon type")+
+  facet_wrap(~ type1, nrow = 3)
+```
+
+## Q3 (5 points): What's the correlation between attack and defense?
+
+```{r}
+# Insert your code here
+pokemon %>% get_correlation(formula = attack ~ defense)
+```
+
+## Q4: (5 points) Create a scatterplot with attack on the y (vertical) axis and defense on the x (horizontal) axis.  Use R to draw a line through the data to show the relationship between attack and defense.  Do not show standard error lines on the scatterplot.
+
+```{r}
+# Insert your code here
+ggplot(pokemon, aes(x = defense, y = attack))+
+  geom_point()+
+  labs(x = "Defense", y = "Attack", title = "Scatterplot of the relationship between attack and defense")+
+  geom_smooth(method = "lm", se = FALSE)
+
+ggplot(pokemon, aes(x = attack, y = defense))+
+  geom_point()+
+  labs(x = "Attack", y = "Defense", title = "Scatterplot of the relationship between attack and defense")+
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## Q5 (5 points): Fit a regression that models attack as a function of defense.
+
+```{r}
+# Insert your code here
+defense_model <- lm(defense ~ attack, data = pokemon)
+
+get_regression_table(defense_model)
+```
+
+## Q6 (5 points): Write out the equation that describes the relationship between attack and defense.  Your answer should be of the form ```attack = SOME_NUMBER + SOME_OTHER_NUMBER * defense```.
+
+```{r}
+# Insert your code here
+get_regression_table(defense_model)
+```
+
+Insert your answer here. attack = 40.5 + 0.4 * defense | That is to say that for every increase of 1 unit in attack, there is an associated increase of, on average, 0.421 units of defense
+
+## Q7 (5 points): How much of the total variance is explained by your model?  
+
+```{r}
+# Insert your code here
+get_regression_summaries(defense_model)
+```
+
+Insert your answer here. total variance = 0.19
+
+## Q8 (5 points): How far off, on average, will your estimate of attack be based on your model? (Hint: which one of the values from get_regression_summaries() gives you that information?)
+
+Insert your answer here. On average, my estimate of attack will be off by 28.
+
+## Q9 (5 points): You will notice that there's one outlier that has an exceptionally large value for 'defense' and a very low value for 'attack'.  What's the name of that pokemon character?
+
+```{r}
+# Insert your code here
+max_def <- pokemon %>% 
+  arrange(desc(defense))
+max_def
+```
+
+Insert your answer here. Shuckle
+
+## Q10 (10 points): What's a better predictor of hp: attack or defense?  Justify your answer based on the output from your code.
+
+```{r}
+# Insert your code here
+att_fit = lm(hp ~ attack, data=pokemon)
+get_regression_summaries(att_fit)
+
+def_fit = lm(hp ~ defense, data=pokemon)
+get_regression_summaries(def_fit)
+```
+
+Insert your answer here. Attack power. In comparing the r_squared values from each of the models, we see the att_fit model accounts for 18% of the variance whereas the def_fit model only accounts for 6%.
+
+## Q11 (5 points): What's the expected value for hp, given a value of 80 for defense?
+
+```{r}
+# Insert your code here
+defense_80 <- pokemon %>% 
+  filter(defense == 80) %>% 
+  skim()
+defense_80
+
+Q11 <- lm(hp ~ defense, data=pokemon)
+get_regression_table(Q11)
+54.770 + 0.196 * 80
+
+Q11.1 = lm(hp ~ attack + defense, data = pokemon)
+get_regression_table(Q11.1)
+get_regression_summaries(Q11.1)
+```
+
+Insert your answer here. I tried a few things here to play with the data, but my variable Q11 provides a regression table that I then used to calculate an expected value of 70.45. 
+
+## Q12 (5 points): Create a boxplot that shows the distribution of values of speed for each different value of type1.  Based on your boxplot, which type of pokemon character is fastest?  Be sure to consider both measures of central tendency and dispersion in your answer.
+
+```{r}
+# Insert your code here
+ggplot(pokemon, aes(x = type1, y = speed))+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  labs(x = "Type", y = "Speed", title = "Distribution of values for speed and type")
+```
+Insert your answer here. Flying pokemon are the fastest in a classical sense of the word, as in getting from point A to B. However, we notice a large maximum Q3 for Psychic Pokemon. My assumption is that this refers to some ability to teleport. We also see some outliers including type Bug, Grass, Poison, and Rock, where individual Pokemon of these types has a special characteristic which makes them particularly fast. What we can see from the boxplot is that with little exception, all flying Pokemon are among the fastest, and this is supported by a tight IQR with a median close to the 75th percentile. And that's because all flying Pokemon can fly, but not all psychic Pokemon can teleport.
+
+
+## Q13 (10 points): Fit a linear model of the explanatory variable 'type1' and the outcome variable 'speed'.
+
+```{r}
+# Insert your code here
+speed_model <- lm(speed ~ type1, data = pokemon)
+
+get_regression_table(speed_model)
+```
+
+## Q14 (5 points): What's the estimate for the mean value of speed for Fairy characters?
+
+```{r}
+# Insert your code here
+type_fairy <- pokemon %>%
+  filter(type1 == "Fairy")
+
+fairy_speed <- type_fairy %>% 
+  skim(speed)
+fairy_speed
+```
+
+Insert your answer here. Mean Fairy Pokemon speed = 48.6

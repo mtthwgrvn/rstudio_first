@@ -1,0 +1,217 @@
+---
+title: "Multiple Regression and CANDY!!!"
+output: html_document
+---
+
+```{r message=FALSE}
+library(tidyverse)
+library(skimr)
+library(moderndive)
+library(fivethirtyeight)
+```
+
+In this session, we'll look at some candy data form fivethirtyeight.com.
+Source: https://fivethirtyeight.com/videos/the-ultimate-halloween-candy-power-ranking/
+
+"winpercent" - how often did a candy win a matchup (e.g., )
+"sugarpercent" - how mucu sugar does it have
+"chocolate" - whether it contains chocolate or not
+
+# Part 0: data exploration - go through the data and plot winpercent on sugarpercent with a categrocial variable chocolate
+```{r}
+# get the data from fivethirtyeight library
+candy <- candy_rankings
+```
+
+
+```{r}
+# scatter plot without categories
+ggplot() +
+    geom_point(data = candy,  aes(x = sugarpercent, y = winpercent)) 
+```
+
+```{r}
+# scatter plot with categories
+ggplot() +
+    geom_point(data = candy,  aes(x = sugarpercent, y = winpercent, color=chocolate)) 
+```
+
+
+## Exercise 1: where is my fitted regression line(s)?
+
+From the textbook, there are two ways to introduce fitted regression lines:
+* `geom_smooth(method = "lm", se = FALSE)`
+* `geom_parallel_slopes(se=FALSE)`
+We show two failed attempts below. Can you figure out why?
+
+
+```{r}
+# These two lines produce a scatter plot.
+# Add the two options, one at a time.
+ggplot() +
+    geom_point(data = candy,  aes(x = sugarpercent, y = winpercent, color=chocolate)) 
+```
+### Why nothing happened here?
+```{r}
+ggplot() +
+    geom_point(data = candy,  aes(x = sugarpercent, y = winpercent, color=chocolate))  +
+    geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+ggplot() +
+    geom_point(data = candy,  aes(x = sugarpercent, y = winpercent, color=chocolate))  +
+    geom_parallel_slopes(se=FALSE)
+```
+
+### Here is the plots that works:
+
+#### Fitting the models with different intercepts and different slopes
+```{r}
+candy %>%
+    ggplot(aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE)
+
+#without the pipe operator
+ggplot(data=candy, aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+candy %>%
+    ggplot(aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    geom_parallel_slopes(se=FALSE)
+
+#without the pipe operator
+ ggplot(data = candy, aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    geom_parallel_slopes(se=FALSE)
+```
+
+
+
+# Part 1: y on x1, y on x2(cat);
+```{r}
+lm_fit_simple_binary = lm(winpercent ~ chocolate, data=candy)
+get_regression_table(lm_fit_simple_binary)
+```
+
+```{r}
+lm_fit_simple_conti = lm(winpercent ~ sugarpercent, data=candy)
+get_regression_table(lm_fit_simple_conti)
+```
+
+
+# Part 2: y on x1 and x2, with different model specifications (but consistent interpretation)
+Here are two linear models each estimating one plot we drew above.
+
+```{r}
+# parallel slopes model
+lm1 = lm(winpercent ~ chocolate + sugarpercent, data=candy)
+get_regression_table(lm1)
+```
+
+```{r}
+# interaction model
+lm2 = lm(winpercent ~ chocolate * sugarpercent, data=candy)
+get_regression_table(lm2)
+```
+
+## Exercise 2-1: write down the model using the numbers in the estimate column
+lm_1 equation: `winpercent = 38.262	+ 18.273*chocolate + 8.567*sugarpercent`
+
+By `lm1`, `winpercent ~ chocolate + sugarpercent`, note, the slope for sugarpercent has `p-value` > 0.05, meaning that its slope is not significantly different from 0.
+
+lm_2 equation: `winpercent = 39.778 + 13.051*chocolate + 5.221*sugarpercent + 10.586*chocolate*sugarpercent`
+
+By `lm2`, `winpercent ~ chocolate * sugarpercent`, note, here, the coefficient for sugarpercent (5.221) and the coefficient for the interaction term `chocolateTRUE:sugarpercent` (10.586) are both not significantly different from 0 as the `p value` is >0.05.
+
+## Exercise 2-2: plot the estimated regression line in the scatter plot
+### For the parallel slope model
+```{r}
+candy %>%
+    ggplot(aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    geom_parallel_slopes(se=FALSE)
+  
+candy %>%
+    ggplot(aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    # geom_parallel_slopes(se=FALSE)
+  # Recall the model: 
+  # `winpercent = 38.262	+ 18.273*chocolate + 8.567*sugarpercent`
+    # If chocolate == FALSE:
+    geom_abline(intercept = 38.26, slope = 8.567, color='green') +
+    # If chocolate == TRUE:
+    geom_abline(intercept = 38.26 + 18.273, slope = 8.567, color='brown')
+
+```
+### For the linear regression with interaction term
+```{r}
+candy %>%
+    ggplot(aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    geom_smooth(method='lm', se=FALSE)
+  
+candy %>%
+    ggplot(aes(x = sugarpercent, y = winpercent, color=chocolate)) +
+    geom_point() +
+    # geom_smooth(method='lm', se=FALSE) +
+  # Recall the model:
+  # `winpercent = 39.778 + 13.051*chocolate + 5.221*sugarpercent + 10.586*chocolate*sugarpercent`
+    # If chocolate == FALSE:
+    geom_abline(intercept = 39.778, slope = 5.221, color='green') +
+    # If chocolate == TRUE
+    geom_abline(intercept = 39.778 +  13.051, slope = 5.221 + 10.586, color='brown')
+
+  
+```
+
+
+
+## Questions
+1. What should we do when we have coefficients that are not significant?
+1.1 drop them from the equation?
+1.2 drop them from the model?
+
+## Takeaway message
+1. We ideally would like to start by choosing a model.
+2. Given any fitted model, we can make interpretations.
+3. Two models can tell comparable or different stories.
+
+
+## Detour 1: all possible and different R-specifications for the same model
+Lesson: We need to understand how R would estimate (fit) the model using the `lm()` functions, given a particular model formula. Based on what we have learned, we should be able to get the model from `get_regression_table()`.
+The following three model specifications or model formula depict the same model.
+```{r}
+lm2_alternative = lm(winpercent ~ chocolate + chocolate * sugarpercent, data=candy)
+get_regression_table(lm2_alternative)
+# get_regression_summaries(lm2_alternative)
+```
+```{r}
+lm2_alternative2 = lm(winpercent ~ chocolate + sugarpercent+ chocolate * sugarpercent, data=candy)
+get_regression_table(lm2_alternative2)
+# get_regression_summaries(lm2_alternative2)
+```
+```{r}
+lm2_alternative3 = lm(winpercent ~ sugarpercent + chocolate * sugarpercent, data=candy)
+get_regression_table(lm2_alternative3)
+```
+
+
+
+## Part 3: bonus - to dump all variables in a linear regression model
+
+```{r}
+lm_all = lm(winpercent ~ ., data = candy[, -1])
+get_regression_table(lm_all)
+```
+### Questions 
+0. Are there interaction terms?
+1. Which factors could you drop from the model above?
+2. Which factors should you keep?
+
+Note, there is no definite answer here. The takeaway message is that you can now interpret  the regression table line by line.

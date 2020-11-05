@@ -1,0 +1,298 @@
+---
+title: "SI 544 FA 2020 Problem Set 1"
+author: "Matthew Garvin"
+uniqname: "mgarvin"
+output: html_document
+---
+
+# SI 544 FA 2020: Problem Set #1
+
+You were introduced to the COVID-19 Data Hub (Guidotti & Ardia, 2020) in this
+week's discussion.  We are going to delve a bit deeper into that data set for
+this assignment.  We will focus on cleaning and manipulating the data so it's
+suitable for generating plots to help us understand the spread of COVID-19.
+
+Google Mobility Reports (GMR) use pooled data to report where people are.
+A example of a mobility report can be accessed via
+https://www.gstatic.com/covid19/mobility/2020-09-11_US_Mobility_Report_en.pdf.
+The GMR provides an indication of the percent change from baseline for the
+following types of locations: retail and recreation, grocery and pharmacy,
+parks, transit stations, workplaces, and residential.  The GMR data can be
+joined to the COVID-19 Data Hub data set by using the `gmr=` option when the
+COVID-19 data set is loaded (see first R block below).
+
+In addition to the GMR, the authors of the COVID-19 Data Hub have made it easy
+to link the COVID-19 data set with data from the World Bank.  Of particular
+interest are two indicators: Total GDP and number of hospital beds per 1000
+people.  The first R block below loads country-level data including the two
+World Bank indicators mentioned and the second one loads province-level data for
+Canada (Canada's provinces are analogous to states in the USA).
+
+```{r load_libraries}
+library(tidyverse)
+library(COVID19)
+```
+
+
+```{r load_all_countries}
+wb <- c("gdp" = "NY.GDP.MKTP.CD", "hosp_beds" = "SH.MED.BEDS.ZS", "diab_prev" = "SH.STA.DIAB.ZS", "water_sanitation" = "IE.PPI.WATR.CD")
+all_countries <- covid19(wb = wb)
+```
+
+```{r load_canada}
+# NOTE: Running this block will take a long time -- be patient!
+#       This will also be run when you knit your notebook, 
+#       so knitting will also take a few minutes
+gmr <- "https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv"
+canada <- covid19(country='CAN',gmr = gmr, level=2)
+```
+
+To complete this assignment, answer the following questions.
+For questions 1-5 use the "all countries" data set (the dataframe named `all_countries`).
+Your answers will change depending on when you do your work because the dataset is updated
+periodically; keep that in mind when sharing your results with your peers.
+
+1. How many different countries are represented in the country-level data set?
+```{r}
+# Type your code here
+diff_countries <- all_countries %>%
+   group_by(administrative_area_level_1) %>%
+   count() %>%
+   rename(Country = administrative_area_level_1,
+          Frequency = n)
+```
+Answer: 196 different countries
+
+
+2. What are the earliest and latest dates in the country-level data set?
+```{r}
+# Type your code here
+all_countries %>%
+   arrange(date)
+
+all_countries %>%
+   arrange(desc(date))
+```
+Answer: Earliest: 2020-01-01, Latest: 2020-09-22
+
+
+3. Use the country-level data set to create a histogram that shows the
+   distribution of values for the number of hospital beds per 1000 people.  Draw
+   a red vertical line that shows the median value on the histogram 
+   (hint: use geom_vline(...) as an additional layer in your ggplot).
+   (hint: watch out for missing values. You may find `na.rm=TRUE` helpful)
+```{r}
+# Type your code here
+
+ggplot(data = all_countries, mapping = aes(x = hosp_beds)) +
+  geom_histogram(color="white") +
+   geom_vline(xintercept = median(all_countries$hosp_beds, na.rm = TRUE), color="red")
+median(all_countries$hosp_beds, na.rm = TRUE)
+```
+Answer: Median = 2.4 hospital beds per 1000 people
+
+4. Use the country-level data set to create a scatterplot of the **total** number of
+   recoveries (on the y-axis) vs. the **maximum** number of hospital beds per 1000 people
+   (on the x-axis) in that country.
+   What does the plot tell you?
+```{r}
+# Type your code here
+
+dat_filter <- all_countries %>%
+   filter(date == "2020-09-20") %>%
+   select(id, date, recovered, administrative_area_level_1, hosp_beds) %>%
+   summarise(max_bed=replace_na(max(hosp_beds), 0), total_rec=sum(recovered, na.rm = TRUE))
+dat_filter
+
+
+ggplot(data = dat_filter, mapping = aes(max_bed, total_rec)) +
+   geom_point(alpha = 0.2)
+```
+Answer: It seems to indicate that beds matter. Although I'm interested in these outliers in terms of total recovered on the y axis. India has a much larger population, and less than 1 bed per 1000 people, whereas Brazil has around 2 and the U.S. has around 3.
+
+
+5. Select another World Bank indicator from
+   https://data.worldbank.org/indicator/ and create a scatterplot between that
+   indicator on the x-axis and the number of confirmed cases (the "confirmed"
+   column) on the y-axis. You can download a list of all indicators from
+   http://databank.worldbank.org/data/download/site-content/WDI_CETS.xls.
+Explain why you chose the indicator you did and provide a brief description of it.
+
+You will need to add the indicator to the list of indicators in the R block that
+you use to read in the data.  For example, if you chose "Literacy rate, adult
+total (% of people ages 15 and above)?", you would notice that the URL for the
+resulting page is
+https://data.worldbank.org/indicator/SE.ADT.LITR.ZS?view=chart.  In that case,
+the indicator name would be "SE.ADT.LITR.ZS" and your code to read in the data
+would be:
+```
+wb <- c("gdp" = "NY.GDP.MKTP.CD", "hosp_beds" = "SH.MED.BEDS.ZS", "literacy_rate" = "SE.ADT.LITR.ZS")
+all_countries <- covid19(wb = wb)
+```
+Note: you may not use SE.ADT.LITR.ZS as your chosen indicator; choose something else!
+
+----
+Answer: I selected diabetes prevalence as a new indicator for the x-axis. I chose this indicator for two reasons: 1) it's a known comordibity of COVID; 2) it is a non-communicable disease associated with increased rates of sedentary lifestyle common in industrialized and developing nations. With this plot I am looking to see if nations with higher rates of diabetes is tied to reduced recovery rates.
+
+This indicator shows diabetes prevalence as a percentage of population between the ages of 20-79
+
+```{r}
+# Type your code here
+
+new_dat_filter <- all_countries %>%
+   filter(date == "2020-09-21") %>%
+   select(id, recovered, diab_prev)
+   #summarise(total_rec=sum(recovered, na.rm = TRUE))
+new_dat_filter
+
+
+axs <- ggplot(data = new_dat_filter, mapping = aes(diab_prev, recovered)) +
+   geom_point(alpha = 0.2) +
+   labs(x = "% of population with diabetes", y = "Total Recovered")
+axs
+#axs + scale_x_continuous(breaks = c(2000, 4000), labels = c("2k", "4k"))
+```
+
+For questions 6-10 use the province-level data set for Canada (the dataframe named `canada`).
+Your answers will change depending on when you do your work because the dataset is updated
+periodically; keep that in mind when sharing your results with your peers.
+
+
+6. How many tests have been conducted in Canada in total?
+```{r}
+# Type your code here
+can_dat_filter <- canada %>%
+   filter(date == "2020-09-20") %>%
+   select(date, key_google_mobility, id, tests) %>%
+   summarise(total_tests=sum(tests, na.rm = TRUE))
+can_dat_filter
+
+all_tests <- sum(can_dat_filter$total_tests)
+all_tests
+   
+```
+Answer: 6,618,405
+tests
+
+
+7. Which Canadian province has conducted the most tests to date?
+```{r}
+# Type your code here
+can_province <- canada %>%
+   arrange(desc(tests))
+can_province
+```
+Answer: Ontario
+
+8. Which Canadian province has the highest recovery rate (where recovery rate is
+   calculated as the number of recovered cases divided by the number of
+   confirmed cases)? Use the most up to date data as you can find using
+   "COVID19" package.
+```{r}
+# Type your code here
+can_recover <- canada %>%
+   filter(date == "2020-09-19") %>%
+   arrange(desc(recovered))
+can_recover
+   
+```
+Answer: Quebec
+
+9. Create a bar plot that shows the number of tests conducted per 1000 people
+   for each province in Canada. Use the most up to date data as you can find using
+   "COVID19" package. (Hint: for Canada, the
+   administrative_area_level_2 variable  contains the province name.)
+```{r}
+# Type your code here
+
+group_province <- canada %>%
+   filter(date == "2020-09-20") %>%
+   group_by(administrative_area_level_2) %>%
+   select(administrative_area_level_2, population, tests) %>%
+   mutate(tests_per_1000 = tests / population * 1000)
+group_province
+
+group_province %>%
+   ggplot(data = group_province, mapping = aes(x = administrative_area_level_2, y = tests_per_1000)) +
+   theme(axis.text.x = element_text(angle=60, hjust=1)) +
+   geom_col()
+```
+   
+10. Ontario and British Columbia are two provinces in Canada.  Create linegraphs
+    that show how the percent change from baseline looks for each of the six
+    types of locations (i.e. retail and recreation, grocery and pharmacy, parks,
+    transit stations, workplaces, and residential) from the GMR for Ontario. 
+    You can experiment with creating one linegraph per location type or, 
+    alternatively, you can create multiple lines on one linegraph.
+    Repeat this for British Columbia.  
+
+```{r}
+# Type your code here
+ontario <- canada %>%
+   select(date, administrative_area_level_2, retail_and_recreation_percent_change_from_baseline, grocery_and_pharmacy_percent_change_from_baseline, parks_percent_change_from_baseline, transit_stations_percent_change_from_baseline, workplaces_percent_change_from_baseline, residential_percent_change_from_baseline) %>%
+   filter(id == "83fc0fa9")
+ontario
+
+bc <- canada %>%
+   select(date, administrative_area_level_2, retail_and_recreation_percent_change_from_baseline, grocery_and_pharmacy_percent_change_from_baseline, parks_percent_change_from_baseline, transit_stations_percent_change_from_baseline, workplaces_percent_change_from_baseline, residential_percent_change_from_baseline) %>%
+   filter(id == "c229681f")
+bc
+
+retail_bc_ontario <- ggplot() +
+   geom_line(data = ontario, mapping = aes(x = date, y = retail_and_recreation_percent_change_from_baseline), color = "red") +
+   geom_line(data = bc, mapping = aes(x = date, y = retail_and_recreation_percent_change_from_baseline), color = "blue")
+retail_bc_ontario
+
+grocery_bc_ontario <- ggplot() +
+   geom_line(data = ontario, mapping = aes(x = date, y = grocery_and_pharmacy_percent_change_from_baseline), color = "red") +
+   geom_line(data = bc, mapping = aes(x = date, y = grocery_and_pharmacy_percent_change_from_baseline), color = "blue")
+grocery_bc_ontario
+
+parks_bc_ontario <- ggplot() +
+   geom_line(data = ontario, mapping = aes(x = date, y = parks_percent_change_from_baseline), color = "red") +
+   geom_line(data = bc, mapping = aes(x = date, y = parks_percent_change_from_baseline), color = "blue")
+parks_bc_ontario
+
+transit_bc_ontario <- ggplot() +
+   geom_line(data = ontario, mapping = aes(x = date, y = transit_stations_percent_change_from_baseline), color = "red") +
+   geom_line(data = bc, mapping = aes(x = date, y = transit_stations_percent_change_from_baseline), color = "blue")
+transit_bc_ontario
+
+workplaces_bc_ontario <- ggplot() +
+   geom_line(data = ontario, mapping = aes(x = date, y = workplaces_percent_change_from_baseline), color = "red") +
+   geom_line(data = bc, mapping = aes(x = date, y = workplaces_percent_change_from_baseline), color = "blue")
+workplaces_bc_ontario
+
+residential_bc_ontario <- ggplot() +
+   geom_line(data = ontario, mapping = aes(x = date, y = residential_percent_change_from_baseline), color = "red") +
+   geom_line(data = bc, mapping = aes(x = date, y = residential_percent_change_from_baseline), color = "blue")
+residential_bc_ontario
+
+ggplot(data = ontario, mapping = aes(x = date, y = retail_and_recreation_percent_change_from_baseline)) +
+   geom_line(color = "red") +
+   labs(x = "Date", y = "Ontario percent change from baseline") +
+   geom_line(data = ontario, aes(date, grocery_and_pharmacy_percent_change_from_baseline), color = "blue") +
+   geom_line(data = ontario, aes(date, parks_percent_change_from_baseline), color = "green") +
+   geom_line(data = ontario, aes(date, transit_stations_percent_change_from_baseline), color = "orange") +
+   geom_line(data = ontario, aes(date, workplaces_percent_change_from_baseline), color = "purple") +
+   geom_line(data = ontario, aes(date, residential_percent_change_from_baseline), color = "black")
+ggplot
+
+ggplot(data = bc, mapping = aes(x = date, y = retail_and_recreation_percent_change_from_baseline)) +
+   geom_line(color = "red") +
+   labs(x = "Date", y = "British Columbia percent change from baseline") +
+   geom_line(data = bc, aes(date, grocery_and_pharmacy_percent_change_from_baseline), color = "blue") +
+   geom_line(data = bc, aes(date, parks_percent_change_from_baseline), color = "green") +
+   geom_line(data = bc, aes(date, transit_stations_percent_change_from_baseline), color = "orange") +
+   geom_line(data = bc, aes(date, workplaces_percent_change_from_baseline), color = "purple") +
+   geom_line(data = bc, aes(date, residential_percent_change_from_baseline), color = "black")
+ggplot
+   
+
+```
+
+    Interpret your results: overall, how are
+    people behaving differently with COVID-19?  How do people's behaviours
+    differ between Ontario and British Columbia?
+
+Answer: More people were staying home in Ontario than in British Columbia. This is particularly apparent in the residential, workplace, and transit plots. More people in British Columbia were out at the parks at least from April - June, while more people in Ontario headed to the parks in July. Ontario shows a deeper decline in retail and grocery plots, but you can also see very similar upticks and downswings among both provinces in these plots.

@@ -1,0 +1,140 @@
+---
+title: "si544-day6-more-basic-regression"
+author: "Matthew Garvin"
+uniqname: "mgarvin"
+date: "10/9/2019"
+output: html_document
+---
+
+# Overview:
+
+1. Guess the Correlation (10 minutes)
+2. A few words about "traditional" vs. "moderndive" representations (10 minutes)
+3. Learning Checks 5.1, 5.2, and 5.3 (25 minutes)
+4. Debrief (15 minutes)
+5. Break (10 minutes)
+6. Learning Checks 5.4, 5.5, and 5.6 (25 minutes)
+7. Debrief (15 minutes)
+
+## Guess the Correlation
+
+Let's start by playing a game:  http://guessthecorrelation.com/
+
+# Review of basic regression with two numerical variables
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(gapminder)
+```
+
+
+```{r}
+evals_ch5 <- evals %>%
+  select(ID, score, bty_avg, age)
+```
+
+
+## (LC5.1) Conduct an exploratory data analysis on evals_ch5 with the outcome variable y being score and age as the  explanatory variable x. 
+
+Remember, this involves three things:
+
+Looking at the raw data values.
+Computing summary statistics.
+Creating data visualizations.
+What can you say about the relationship between age and teaching scores based on this exploration?
+
+```{r}
+# Insert your code here
+glimpse(evals_ch5)
+
+skim(evals_ch5)
+
+evals_ch5 %>% 
+  get_correlation(formula = score ~ age)
+
+ggplot(data = evals_ch5, mapping = aes(x = age, y = score)) +
+  geom_point()+
+  labs(x = "Age", y = "Teaching Score", title = "Relationship between teaching scores and age") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+Insert your interpretations here.
+
+## (LC5.2) Fit a new simple linear regression using lm(score ~ age, data = evals_ch5) where age is the explanatory variable x. 
+
+Get information about the "best-fitting" line from the regression table by applying the get_regression_table() function. How do the regression results match up with the results from your earlier exploratory data analysis?
+
+```{r}
+# Insert your code here
+ggplot(evals_ch5, aes(x = age, y = score)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+
+model <- lm(score ~ age, data = evals_ch5)
+get_regression_table(model)
+get_regression_summaries(model)
+skim(evals_ch5)
+```
+
+Insert your interpretations here.
+
+## (LC5.3) Generate a data frame of the residuals of the model where you used age as the explanatory x variable.
+
+```{r}
+# Insert your code here
+res <- get_regression_points(model)
+res
+```
+
+## Regroup! (back into the main Zoom room)
+
+## Debrief
+
+# Break
+
+# Part II: One categorical explanatory variable
+
+```{r}
+library(gapminder)
+gapminder2007 <- gapminder %>%
+  filter(year == 2007) %>%
+  select(country, lifeExp, continent, gdpPercap)
+```
+
+## (LC5.4) Conduct an exploratory data analysis with the explanatory variable x being continent and  gdpPercap as the outcome variable y. 
+
+What can you say about the differences in GDP per capita between continents based on this exploration?
+
+```{r}
+# Insert your code here
+ggplot(gapminder2007,mapping=aes(x=continent,y=gdpPercap)) +
+  geom_boxplot()
+```
+
+Insert your interpretations here.
+
+## (LC5.5) Fit a  linear regression using lm(gdpPercap ~ continent, data = gapminder2007) where continent is the explanatory variable x and gdpPercap is the outcome variable y. 
+
+Get information about the “best-fitting” line from the regression table by applying the get_regression_table() function. How do the regression results match up with the results from your previous exploratory data analysis?
+
+```{r}
+# Insert your code here
+gdp_model <- lm(gdpPercap ~ continent, data = gapminder2007)
+get_regression_table(gdp_model)
+```
+
+Insert your interpretations here.
+
+## (LC5.6) Using either the sorting functionality of RStudio’s spreadsheet viewer or using the data wrangling tools you learned in Chapter 3, identify the five countries with the five smallest (most negative) residuals.
+
+What do these negative residuals say about their life expectancy relative to their continents’ life expectancy?
+
+```{r}
+# Insert your code here
+```
+
+Insert your interpretations here.
+
+## Debrief

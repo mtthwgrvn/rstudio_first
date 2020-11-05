@@ -1,0 +1,234 @@
+---
+title: "SI 544 Day 4: Descriptive Statistics and Basic Probability"
+author: "Matthew Garvin (mgarvin)"
+date: "9/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+weight <- c(115, 115, 117, 120, 123, 126, 129, 132, 135, 139, 142, 146, 150, 154, 159, 164, 180)
+height <- c(58, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72) 
+```
+
+# Central Tendency
+
+## Mean
+
+```{r}
+weight_mean <- mean(weight)
+height_mean <- mean(height)
+
+sprintf("Mean Weight: %1.4f, Mean Height: %1.4f", weight_mean, height_mean)
+```
+
+## Median
+
+```{r}
+weight_median <- median(height)
+height_median <- median(weight)
+
+sprintf("Median Weight: %1.4f, Median Height: %1.4f", weight_median, height_median)
+```
+
+
+## Minimum
+
+```{r}
+min(weight)
+```
+
+## Maximum
+
+```{r}
+max(weight)
+```
+
+## Quantiles
+
+```{r}
+quantile(weight)
+```
+
+```{r}
+quantile(weight, prob = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
+```
+Equivalently:
+
+```{r}
+quantile(weight, prob = seq(0, 1, length = 11))
+```
+
+```{r}
+?quantile
+```
+
+## Mode
+
+```{r}
+get_mode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+height_mode <- get_mode(height)
+weight_mode <- get_mode(weight)
+
+sprintf("Mode Weight: %s, Height Mode: %s", weight_mode, height_mode)
+```
+
+# Dispersion
+
+## Range
+
+```{r}
+range(weight)
+```
+
+## Interquartile Range
+
+```{r}
+IQR(weight)
+```
+
+## Standard Deviation
+
+```{r}
+weight_sd <- sd(weight)
+height_sd <- sd(height)
+
+sprintf("Weight SD: %1.4f, Height SD: %1.4f", weight_sd, height_sd)
+```
+
+## z-scores
+
+One way:
+
+```{r}
+x <- 70
+
+zWeight <- (x - mean(weight) ) / sd(weight)
+zHeight <- (x - mean(height) ) / sd(height)
+sprintf("Weight Z: %1.2f. Height Z: %1.2f", zWeight, zHeight)
+
+```
+
+Another way:
+
+```{r}
+
+zWeight <- scale(x, center = mean(weight), scale = sd(weight))
+zHeight <- scale(x, center = mean(height), scale = sd(height))
+sprintf("Weight Z: %1.2f. Height Z: %1.2f", zWeight, zHeight)
+```
+
+What's the probability of someone being less than 74" tall?
+
+```{r}
+
+pnorm(74, mean(height), sd(height))    #using x, mu, and sigma
+
+```
+
+So what's the probability of someone being greater than 74" tall?
+
+```{r}
+1 - pnorm(74, mean(height), sd(height)) 
+```
+
+# Putting our knowledge together
+
+Let's load some additional data:
+
+```{r}
+download.file("http://www.openintro.org/stat/data/bdims.RData", destfile = "bdims.RData")
+load("bdims.RData")
+```
+
+The description of the data is available from https://www.openintro.org/data/index.php?data=bdims
+
+## Learning Check 544.4.1
+
+Use pipes to create two new dataframes (or tibbles): 
+one called fdims containing only those measurements for "females" and 
+one called mdims containing only those measurements for "males". 
+
+Note that gender is no longer considered a binary variable, but the dataset was collected without
+such information.
+
+Hint: see "filter" from last lecture.
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+
+```
+
+
+```{r}
+# INSERT YOUR R CODE HERE
+fdims <- bdims %>%
+  filter(sex == 0)
+
+mdims <- bdims %>%
+  filter(sex == 1)
+```
+
+## Learning Check 544.4.2
+
+Create a histogram for the distribution of heights for females.  Make a good choice for binwidth or bins.
+
+```{r}
+# INSERT YOUR R CODE HERE
+fdims_histo <- ggplot(fdims, mapping = aes(x=hgt)) +
+  geom_histogram(bins=15)
+fdims_histo
+```
+
+## Learning Check 544.4.3
+
+Calculate the mean and standard deviation for the heights of females.
+
+```{r}
+# INSERT YOUR R CODE HERE
+
+sprintf("Mean Height: %1.4f, Standard Deviation: %1.4f", mean(fdims$hgt), sd(fdims$hgt))
+
+
+```
+
+
+## Learning Check 544.4.4
+
+Comment on the relationship between the histogram you generated and the computed values of the mean and 
+standard deviation.
+
+Mean is average heights of all female. It looks to be in the middle of the two peaks. Most of the females lie within +/- 19.5 cm, which is 3 times the standard deviation.
+
+
+
+Let's take a look at a slightly richer histogram.  This one overlays a z-distribution that has a mean and standard
+deviation equal to that of the heights from fdims:
+
+```{r}
+ggplot(fdims, mapping=aes(x=hgt)) + 
+  geom_histogram(aes(y = ..density..), bins = 15, fill="blue") + 
+  stat_function(fun=dnorm, args=with(fdims, c(mean=mean(hgt), sd = sd(hgt))))
+```
+```{r}
+
+pnorm(180, mean(mdims$hgt), sd(mdims$hgt))    #using x, mu, and sigma
+
+```
+
+## Learning Check 544.4.5
+
+What's the probability that any given male person is at least 180cm tall?
+
+Probability that any given male person is at least 180 cm tall is 0.6231864, or 62.3%
+

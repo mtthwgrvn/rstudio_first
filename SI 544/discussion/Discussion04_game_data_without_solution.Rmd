@@ -1,0 +1,121 @@
+---
+title: "Exercises using game data"
+author: "Matthew Garvin"
+uniquename: "mgarvin"
+date: "10/01/2020"
+output: html_document
+---
+
+# Part 2: Exploring Problem Set 2 Data
+```{r}
+library(tidyverse)
+game_data <- read_csv('bgg_2018.csv')
+```
+
+## Explore the "dataset"
+By dataset, we mean `game_data` as a dataframe. When exploring, look at the column titles.
+
+## Does there seem to be a relationship between geek_rating and avg_rating?
+
+```{r}
+# check correlation
+cor(game_data$avg_rating, game_data$geek_rating)
+```
+Q: What can you say about the relationship based on the output from `cor`?
+
+```{r}
+# let's create a scatter plot
+ggplot(game_data, aes(y=avg_rating, x=geek_rating,))+
+  geom_point()
+```
+
+```{r}
+# how about trying jitter to deal with overplotting?
+ggplot(game_data, aes(y=avg_rating, x=geek_rating))+
+  geom_jitter(width = 0.25, height = 0.25)
+```
+
+```{r}
+# let's add a line
+ggplot(game_data, aes(y=avg_rating, x=geek_rating))+
+  geom_jitter(width = 0.25, height = 0.5)+
+  geom_smooth(method=lm)
+```
+Q: What can you say about the relationship based on the above graph?
+
+
+## Get top 50 games and check how the avg_rating varies based on certain factors (age and max_players)
+```{r}
+# get top 50 games
+top_50 <- game_data %>%
+  filter(rank == 1:50)
+
+```
+
+```{r}
+#how does the rating vary with number of players?
+ggplot(top_50, aes(factor(max_players), avg_rating)) +
+  geom_boxplot()
+
+```
+
+```{r}
+#how does the rating vary with age?
+ggplot(top_50, aes(factor(age), avg_rating)) +
+  geom_boxplot()
+
+```
+
+## Get games with 5, 10, and 15 max players and check how the avg_rating varies
+```{r}
+# get data for games with 5, 10, and 15 max players
+gd_sp <- game_data %>% 
+  filter(max_players %in% c(5, 10, 15))
+```
+
+```{r}
+# how does the avg_rating vary with number of max_players for games with 5, 10, and 15 max_players?
+ggplot(gd_sp, aes(factor(max_players), avg_rating)) +
+  geom_boxplot()
+
+```
+
+```{r}
+# simpler steps to get the data and create a boxplot
+game_data_5_players <- game_data %>% filter(max_players==5)
+
+ggplot()+
+  geom_boxplot(data = game_data_5_players, aes(max_players, avg_rating))
+
+summary(game_data_5_players$avg_rating)
+
+```
+
+Q: From the output of the above written code, map the summary measures to different parts of the box plot.
+
+```{r}
+# get data for max_players = 10 and create a box plot
+gd_10play <- game_data %>% 
+  filter(max_players == 10)
+
+ggplot(gd_10play, aes(max_players, avg_rating)) +
+  geom_boxplot()
+
+summary(gd_10play$avg_rating)
+
+```
+
+```{r}
+# get data for max_players = 15 and create a box plot
+gd_15play <- game_data %>% 
+  filter(max_players == 15)
+
+ggplot(gd_15play, aes(max_players, avg_rating)) +
+  geom_boxplot()
+
+summary(gd_15play$avg_rating)
+```
+
+Q: What are the differences between ratings for games with 5, 10, and 15 max_players?
+
+There are some interesting differences here. The games with 5 max players, the median is right in the middle of the IQR, while the median with 10 max players is closer to Q3 and 15 max is slightly closer to Q1. We can also see that there are some outliers in the max 5 player plot beyone the maximum Q3.

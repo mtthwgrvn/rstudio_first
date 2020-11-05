@@ -1,0 +1,201 @@
+---
+title: "L7 - R-squared explained"
+date: "10/5/2020"
+output: html_document
+---
+
+Outline:
+
+1. Go through the math for R-squared
+2. Calculate R-squared by hand, for `lm(y ~ x1)`
+3. Calculate R-squared with `get_regression_summaries`, for `lm(y~x2)`
+4. Draw conclusion for which is a better predictor for y: x1 or x2.
+5. Introduce a multivariate regression: why not both x1 and x2?
+
+# R-squared explained
+R-squared represents _the proportion of the variance for $y$_ that is explained
+by independent variable(s) in a regression model. R-squared are useful for model
+comparisons.
+
+In this notebook, we will first introduce how R-squared is calculated for a
+given regression model and introduce model comparison based on $R^2$.
+
+
+## Why we typeset R-squared as $R^2$?
+The syntax is from LaTeX and RStudio renders the "code" into math expressions. Here are a few things that you can do:
+
+* Superscripts are introduced by `^`: `R^2` ==> $R^2$
+* Subscripts are introduced by `_`: `SS_{total}` ==> $SS_{total}$
+* Fractions are written in two parts: `\frac{1}{2}` ==> $\frac{1}{2}$
+* All special functions are introduced by `\`. Like this summation symbol:
+  `\sum` ==> $\sum$.
+
+As you noticed, `$` introduces inline math expression. Also, `$$` introduces
+equations.
+
+## How are $R^2$'s calculated?
+
+To start with, let's check out a few mathematical facts about $R^2$ (R-squared). These equations are typed up according to <https://en.wikipedia.org/wiki/Coefficient_of_determination>. We keep them in this notebook for your reference.
+
+We will treat all the following equations as "facts". If you are interested, you can verify them on your own.
+
+To begin with, there are two ways to calculate $R^2$ and they are equivalent.
+
+$$
+R^2 = \frac{SS_{explained}}{ SS_{total}} = 1 - \frac{SS_{residual}}{SS_{total}}
+$$
+
+
+$$SS_{residual} + SS_{explained} = SS_{total}$$
+
+Here are how each of the items are defined. Here $y_i$ is the outcome variable as observed. $\hat y_i$ is the `y_hat` variable, as predicted y the linear model. And, $\bar y$ is simply denoting the mean of $y_i$, as observed.
+$$
+SS_{explained} =  \sum_i(\hat y_i - \bar y)^2
+$$
+$$
+SS_{residual} = \sum_i (y_i - \hat y_i) ^2
+$$
+
+$$
+SS_{total} =  \sum_i(y_i - \bar y)^2
+$$
+
+Building on what we have learned, there are two ways to calculate $R^2$ which are identical (mathemtically):
+$$
+R^2 = 1 - \frac{\sum_i (y_i - \hat y_i) ^2}{\sum_i(y_i - \bar y)^2}
+   = \frac{
+     \sum_i(y_i - \bar y)^2 - \sum_i (y_i - \hat y_i) ^2
+   }
+   {
+     \sum_i(y_i - \bar y)^2
+   }
+   = \frac{
+     \sum_i(\hat y_i - \bar y)^2
+   }
+   {
+     \sum_i(y_i - \bar y)^2
+   }
+$$
+
+# $R^2$ in action
+
+## About the data
+In the following dataframe, `y` is constructed using a linear combination of `x1` and `x2`. For details about how `y` was constructed, please refer to the Appendix section.
+
+```{r message=FALSE, warning=FALSE}
+library(moderndive)
+library(dplyr)
+df = read.csv("https://raw.githubusercontent.com/llinfeng/SI544_Data/master/L7_R_Squared_simulated_data.csv")
+```
+
+### Exercise: calculate the $R^2$ for the linear model `lm(y~x1, data=df)`
+```{r}
+# Step 1: what do we see visually?
+library(ggplot2)
+df %>%
+  ggplot(aes(x = x1, y = y)) +
+    geom_point() +
+    geom_smooth(method = "lm", se=FALSE)
+```
+
+
+```{r}
+# Now, let's estimate the linear model and extract its coefficients
+lm_fit_x1 = lm(y ~ x1, data=df)
+b0_est = get_regression_table(lm_fit_x1)$estimate[1] # This is the intercept
+b1_est =  get_regression_table(lm_fit_x1)$estimate[2] # This is the slope for x1
+
+df %>%
+    mutate(
+        # Apply the model for estimating y_hat
+        y_hat = b0_est + b1_est * x1,
+        residual = y - y_hat,
+    ) %>%
+    summarize(
+      SS_explained = sum((y_hat - mean(y))^2),
+      SS_residual = sum((y - y_hat)^2),
+      SS_total = sum((y - mean(y))^2),
+      # r_squared = 1 - (sum of squared residuals) / (sum of squared deviation from the mean)
+      r_squared1 = 1 - SS_residual / SS_total,
+      r_squared2 = SS_explained / SS_total
+    )
+```
+
+# Model comparison
+
+## Estimate model `y ~ x1` and `y ~ x2` separately, and comapre the $R^2$
+
+```{r}
+# Model 1
+lm_fit_x1 = lm(y ~ x1, data=df)
+# get_regression_table(lm_fit_x1)
+get_regression_summaries(lm_fit_x1)
+```
+
+```{r}
+# Model 2
+lm_fit_x2 = lm(y ~ x2, data=df)
+# get_regression_table(lm_fit_x2)
+get_regression_summaries(lm_fit_x2)
+```
+
+We may conclude that variable `x2` does a better job of "explaining" variation in the outcome variable `y`.
+
+## Now, how about estimating `y ~ x1 + x2`?
+```{r}
+lm_fit = lm(y ~ x1 + x2, data = df)
+get_regression_table(lm_fit)
+get_regression_summaries(lm_fit)
+```
+In short, it does a even better job.
+
+
+
+# Appendix
+In this section, we generate the random samples and populate the dataframes we used previously.
+
+
+## df: y = 10 + 5 * x1 + 10 * x2 + error_term
+```{r}
+library(dplyr)
+# First, seed the simulation for reproducibility 
+set.seed(1)
+sim_count = 100 # So that we are no dealing with small sample stuff
+                # Usually, sample size <= 30 is considered to be small sample
+
+# Specify the parameters for the linear relationship
+b0 = 3   # Let 2 be the intercept
+b1 = 5   # Let 5 be the slope for x1
+b2 = 10  # Let 10 be the slope for x2
+
+# Specify the mean and sd for x1 and x2, 
+# We generate x1 and x2 as two random samples from the same normal distribution 
+the_mean <- 9
+the_standard_deviation <- 10
+
+df <- data.frame(x1 = rnorm(sim_count,
+                           mean = the_mean, 
+                           sd = the_standard_deviation 
+                           ),
+                 x2 = rnorm(sim_count,
+                           mean = the_mean, 
+                           sd = the_standard_deviation 
+                           ),
+                 # Introduce the error term, with mean 0 and sd 10
+                 error_term = rnorm(
+                                    sim_count,
+                                    mean = 0, sd = 10
+                 )
+)
+
+# Populate the outcome variables for df
+df$y <- b0 + b1 * df$x1 + b2 * df$x2 + df$error_term
+
+# Keep the relevant columns
+df_production = df %>%
+  # Note, we drop error_term here. It is introduced mechnically, to add variation to y.
+  select(y, x1, x2)
+
+write.csv(df_production, 'L7_R_Squared_simulated_data.csv', row.names = FALSE)
+  # row.names avoid the index column to be written to the CSV file.
+```

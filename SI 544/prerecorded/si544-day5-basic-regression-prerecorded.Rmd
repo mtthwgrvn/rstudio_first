@@ -1,0 +1,175 @@
+---
+title: "si544-day5-basic-regression"
+author: "Chris Teplovs"
+date: "10/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(gapminder)
+```
+
+## Load & Look
+
+
+```{r}
+evals_ch6 <- evals %>%
+  select(ID, score, bty_avg, age)
+```
+
+```glimpse``` can be helpful:
+
+```{r}
+glimpse(evals_ch6)
+```
+
+Alternatively, you can draw a random sample of some values and look at what you get:
+
+```{r}
+evals_ch6 %>% sample_n(5)
+```
+
+Now that you understand descriptive statistics and visualizations, let's take a shortcut:
+
+
+```{r}
+evals_ch6 %>%
+  select(score, bty_avg) %>%
+  skim()
+
+```
+
+```{r}
+evals_ch6 %>%
+  get_correlation(formula = score ~ bty_avg)
+```
+
+Equivalently:
+
+```{r}
+evals_ch6 %>%
+  summarize(correlation = cor(score, bty_avg))
+```
+
+Visualization:
+
+```{r}
+ggplot(evals_ch6, aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "Beauty Score", y = "Teaching Score",
+       title = "Scatterplot of relationship of teaching and beauty scores")
+```
+
+```{r}
+ggplot(evals_ch6, aes(x = bty_avg, y = score)) +
+  geom_jitter() +
+  labs(x = "Beauty Score", y = "Teaching Score",
+       title = "Scatterplot of relationship of teaching and beauty scores")
+```
+
+```{r}
+ggplot(evals_ch6, aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "Beauty Score", y = "Teaching Score",
+       title = "Relationship between teaching and beauty scores") +  
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+
+## Simple Linear Regression
+
+```{r}
+# Fit regression model:
+score_model <- lm(score ~ bty_avg, data = evals_ch6)
+```
+
+
+```{r}
+# Get regression table:
+get_regression_table(score_model)
+```
+
+```{r}
+get_regression_summaries(score_model)
+```
+
+### Best fit
+
+```{r}
+regression_points <- get_regression_points(score_model)
+regression_points
+```
+
+Let's calculate the sum of squared residuals using a pipeline:
+
+```{r}
+regression_points %>%
+  mutate(squared_residuals = residual^2) %>%
+  summarize(sum_of_squared_residuals = sum(squared_residuals))
+
+```
+
+
+```{r}
+ggplot(regression_points, mapping=aes(x=residual)) + geom_histogram()
+```
+
+
+
+## One categorical predictor variable
+
+Let's return to the Gapminder data:
+
+```{r}
+library(gapminder)
+gapminder2007 <- gapminder %>%
+  filter(year == 2007) %>%
+  select(country, lifeExp, continent, gdpPercap)
+
+```
+
+
+What did the above code block do?
+
+INSERT YOUR ANSWER HERE
+
+```{r}
+glimpse(gapminder2007)
+```
+
+
+Use skim() to get a "feel" for lifeExp and continent.  What does the output tell you?
+
+```{r}
+# INSERT YOUR R CODE HERE
+```
+
+```{r}
+ggplot(gapminder2007, aes(x = lifeExp)) +
+  geom_histogram(binwidth = 5, color = "white") +
+  labs(x = "Life expectancy", y = "Number of countries",
+       title = "Histogram of distribution of worldwide life expectancies") +
+  facet_wrap(~ continent, nrow = 2)
+```
+
+```{r}
+ggplot(gapminder2007, aes(x = continent, y = lifeExp)) +
+  geom_boxplot() +
+  labs(x = "Continent", y = "Life expectancy (years)",
+       title = "Life expectancy by continent")
+```
+
+```{r}
+lifeExp_by_continent <- gapminder2007 %>%
+  group_by(continent) %>%
+  summarize(median = median(lifeExp), mean = mean(lifeExp))
+lifeExp_by_continent
+```
+

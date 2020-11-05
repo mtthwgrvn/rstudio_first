@@ -1,0 +1,137 @@
+---
+title: "DS6"
+date: "10/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Linear regression with categorical variables
+* Take away message: `lm(y~factor(x))` is a handy way of comparing means across subgroups in `x`.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(moderndive)
+df = txhousing
+```
+
+## Exercise: Data exploration
+Try to answer the following questions using what you have learned so far about R and Rstudio:
+1. What is the dataset about?
+2. What does `median` stand for?
+3. How is `median` related to `year`?
+
+
+```{r}
+# Q1: What is the dataset about?
+help(txhousing)
+# Q2: 
+# Then, look in the help doc for "median"
+# Q3: to get a general sense, plotting a scatter plot can be a good start
+ggplot(data = df, mapping = aes(x = year, y = median)) +
+    # geom_point()
+    geom_jitter()
+# Alternative plot
+df %>%
+    ggplot(aes(x = factor(year), y = median)) +
+    geom_boxplot()
+
+```
+
+
+## Discussion: how to model median sale price as a function of year?
+1. Can you predict the `median` sale price for 2016? If yes, what kind of a model would we need?
+2. How are the "estimated means of the `median` (median sale price)" different between years?
+
+We can model the median sale price using year in two ways - 1) treat year as a continuous variable, and 2) treat year as a categorical variable. The objective is to understand the role of these two models in answering the questions above
+## `year` as a continous variable
+```{r}
+lm_fit_years_conti = lm(median ~ year, data=df)
+get_regression_table(lm_fit_years_conti)
+get_regression_summaries(lm_fit_years_conti)
+```
+
+
+```{r}
+lm_fit_years_as_factor = lm(median ~ factor(year), data=df )
+get_regression_summaries(lm_fit_years_as_factor) # Note, this line will fail to knit. Comment it out when knitting for submission.
+```
+
+```{r}
+df_year_as_cat = df %>% mutate(year = factor(year))
+lm_fit_years_as_factor = lm(median ~ year, data=df_year_as_cat )
+get_regression_table(lm_fit_years_as_factor)
+get_regression_summaries(lm_fit_years_as_factor)
+```
+In the output above, which year is the reference year?
+
+## What does `y ~ factor(year)` really tells us?
+
+```{r}
+mean_of_median_price_by_year = df %>%
+    group_by(year) %>%
+    summarise(mean_of_median_price = mean(median, na.rm = TRUE))
+ 
+mean_of_reference_group = mean_of_median_price_by_year$mean_of_median_price[1] 
+
+mean_of_median_price_by_year %>%
+    mutate(
+        the_diff = mean_of_median_price - mean_of_reference_group
+    )
+```
+## Let's alternate the "reference group" and see how the model estimate changes
+
+### Demo: reordering a factor variable
+1. We can change how different levels of a factor variable are "ordered" by specifying the order by hand
+2. By default, in the `lm()`-regression, the first "group" in the factor variable is taken as the reference group.
+```{r}
+df %>% mutate(
+    # This is one way we can "change the reference group"
+    year = factor(year, levels = c(2005, 
+                                   2000:2004, 2006:2015 ))
+    ) %>%
+    ggplot(aes(x = year, y = median)) + 
+    geom_boxplot()
+```
+
+
+### Exercise: use the new `year` variable for regressoin
+```{r}
+# Assign the adjusted dataframe to a variable
+df_year_as_cat_2005_as_refgroup = df %>% mutate(
+    # This is one way we can "change the reference group"
+    year = factor(year, levels = c(2005,
+                                   2000:2004,
+                                   2006:2015
+                                   ))
+    )
+lm_fit_years_reordered = lm(median ~ year, data=df_year_as_cat_2005_as_refgroup ) # 
+get_regression_table(lm_fit_years_reordered)
+```
+
+## Exercise: again, what does `y ~ factor(year)` really tells us?
+
+```{r}
+mean_of_median_price_by_year = df_year_as_cat_2005_as_refgroup %>%
+    group_by(year) %>%
+    summarise(mean_of_median_price = mean(median, na.rm = TRUE))
+
+mean_of_reference_group = mean_of_median_price_by_year$mean_of_median_price[1] 
+
+mean_of_median_price_by_year %>%
+    mutate(
+        the_diff = mean_of_median_price - mean_of_reference_group
+    )
+```
+
+Going back to the two questions we asked in the beginning:
+1. Can you predict the `median` sale price for 2016? If yes, what kind of a model would we need?
+2. How are the "estimated means of the `median` (median sale price)" different between years?
+
+1. By fitting a linear model of `lm(median ~ year)`, where `year` is treated as
+   a continuous variable, we can calculate the model prediction for year 2016.
+2. The linear model `lm(median ~ factor(year))` helps us to compare means of
+   `median` across subgroups of `year`.

@@ -1,0 +1,187 @@
+---
+title: "Counting a simulated Normal distribution + Z-score from sample means"
+author: ""
+date: ""
+---
+
+# Part 1: simulating normal distribution and calculating the quantiles
+
+
+
+## Simulation: random sample from Normal(9, 30)
+In the following code snippet, we generate a random sample from a Normal distribution with `mean = 9` and `standard_deviation=30`.
+
+
+```{r}
+library(ggplot2)
+
+the_mean <- 9
+the_standard_deviation <- 30
+
+set.seed(1) #Q: why we set a seed? For what?
+sim_count = 1000000 # generate a random sample of size a million
+
+df <- data.frame(v1 = rnorm(sim_count,
+                            mean = the_mean, 
+                            sd = the_standard_deviation 
+                            ) 
+                 )
+summary(df)
+```
+
+### Interlude: why we set the seed? For reproducibility.
+Source: <http://rfunction.com/archives/62>
+```{r}
+set.seed(5)
+print(rnorm(5)) # A batch of random numbers
+print(rnorm(5)) # Another batch of random numbers
+```
+
+
+```{r}
+set.seed(5)
+print(rnorm(5)) # The same batch of random numbers
+```
+
+
+### Calculate the z-score for v1
+```{r}
+df$z_score = (df$v1 - mean(df$v1)) / sd(df$v1)
+summary(df)
+```
+
+
+
+### Inspect the histogram for `df$v1` and `df$z_score`
+
+```{r}
+ggplot(df) + 
+    geom_histogram(aes(x = v1, ),
+                   colour = "black",
+                   bins = 100,
+                   fill = "blue") + 
+    geom_histogram(aes(x = z_score, ),
+                   colour = "black",
+                   bins = 100,
+                   fill = "white") 
+```
+### And, a closer look at the histogram for the z_score:
+```{r}
+ggplot(df) + 
+    geom_histogram(aes(x = z_score, ),
+                   colour = "black",
+                   bins = 100,
+                   fill = "white") 
+```
+
+## Density plot: the area under the graph is 1.
+
+```{r}
+ggplot(df, aes(x = z_score)) + 
+geom_histogram(aes(y =..density..),
+               colour = "black",
+               bins = 100,
+               fill = "white") +
+    stat_function(fun = dnorm, args = list(mean = mean(df$z_score), sd = sd(df$z_score)), color="red")
+```
+
+### Draw auxiliary lines at 0, 1, 2
+
+```{r}
+ggplot(df, aes(x = z_score)) + 
+geom_histogram(aes(y =..density..),
+               colour = "black",
+               bins = 100,
+               fill = "white") +
+    stat_function(fun = dnorm, args = list(mean = mean(df$z_score), sd = sd(df$z_score)), color="red") +
+geom_vline(xintercept = 0, color='black') +
+    geom_vline(xintercept = sd(df$z_score), color='blue') +
+    geom_vline(xintercept = - sd(df$z_score), color='blue') +
+    geom_vline(xintercept = sd(df$z_score) * 2, color='red') +
+    geom_vline(xintercept = - sd(df$z_score) * 2, color='red')
+    ```
+The following statements are equivalent given that there are 1,000,000
+1. By count: There are roughly 950,000 random samples whose z_score value is
+   between the two red lines;
+2. By "probability": out of a total of 1,000,000 values in vector df$z_score,
+   95% of them lie between the two red lines
+3. By area: The area under the curve that is between the two red lines is 0.95
+
+## Counting vs probability
+For values stored in `df$z_score`, what is the fraction of numbers that are
+smaller than its mean?
+```{r}
+# calculate the mean:
+the_mean <- mean(df$z_score)
+the_mean # This is very close to 0.
+```
+
+```{r}
+library(dplyr)
+# Count the number of rows that has z_score smaller than the mean
+count_smaller_than_mean = df %>% filter(z_score <= the_mean) %>%
+    summarise(count = n()) 
+count_smaller_than_mean$count
+```
+
+Then, what is the probability that a randomly chosen number from `df$z_score` is
+smaller than its mean, 0?
+```{r}
+count_smaller_than_mean$count / length(df$z_score)
+```
+
+### Exercise
+For values stored in `df$z_score`, what is the fraction of numbers that are
+smaller than two times its standard deviation?
+```{r}
+# Step 1: get the value "two times its standard deviation"
+value_2sd = 2 * sd(df$z_score)
+```
+
+```{r}
+# Step 2: Count
+count_smaller_than_2sd = df %>% filter(z_score <= value_2sd) %>%
+    summarise(count = n()) 
+count_smaller_than_2sd
+```
+
+```{r}
+# Step 3: calculate the fraction/probability
+
+count_smaller_than_2sd / length(df$z_score)
+```
+
+
+
+
+## Quantiles: the "tick" at which x% are smaller than it
+```{r}
+# What does "3rd Qu." mean?
+summary(df$z_score)
+```
+
+### Use df$z_score, calculate the probability that a random chosen number for this column is smaller than its 3rd Quantile
+```{r}
+count_between_1sd = df %>% filter(z_score <= 0.675059) %>%
+    summarise(count = n()) 
+count_between_1sd$count / length(df$z_score)
+```
+That is, there are 75% random samples that are smaller than the 3rd quantile, 0.675059.
+
+## Confidence intervals: 1 standard deviations away from the mean
+```{r}
+library(dplyr)
+count_between_1sd = df %>% filter(
+    z_score <= 1 * sd(z_score) & z_score >= -1 * sd(z_score)) %>%
+    summarise(count = n())
+count_between_1sd$count / sim_count
+```
+
+    
+## Review: Box plot and histogram
+Open [this link](https://commons.wikimedia.org/wiki/File:Boxplot_vs_PDF.svg), or inspect the following plot:
+
+![boxplot and histogram, source: Wikimedia](https://upload.wikimedia.org/wikipedia/commons/1/1a/Boxplot_vs_PDF.svg)
+
+
+

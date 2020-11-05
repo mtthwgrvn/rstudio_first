@@ -1,0 +1,126 @@
+---
+title: "CH 3-4 Data Wrangling and Tidy Data"
+author: "Matt Garvin"
+date: "9/18/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Chapter 3 Data Wrangling
+
+## Needed Packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(nycflights13)
+```
+## Filter rows
+
+
+```{r}
+portland_flights <- flights %>%
+  filter(dest == "PDX")
+View(portland_flights)
+```
+
+
+```{r}
+alaska_flights <- flights %>% 
+  filter(carrier == "AS")
+```
+
+
+```{r}
+btv_sea_flights_fall <- flights %>% 
+  filter(origin == "JFK" & (dest == "BTV" | dest == "SEA") & month >= 10)
+View(btv_sea_flights_fall)
+```
+
+
+```{r}
+not_BTV_SEA <- flights %>% 
+  filter(!(dest == "BTV" | dest == "SEA"))
+View(not_BTV_SEA)
+```
+
+```{r}
+flights %>% filter(!dest == "BTV" | dest == "SEA")
+```
+
+```{r}
+many_airports <- flights %>% 
+  filter(dest %in% c("SEA", "SFO", "PDX", "BTV", "BDL"))
+View(many_airports)
+```
+
+
+## Learning Check LC3.1
+What's another way of using the "not" operator ! to filter only the rows that are not going to Burlington, VT nor Seattle, WA in the flights data frame? Test this out using the previous code.
+```{r}
+many_airports <- flights %>% 
+  filter(!(dest %in% c("SEA", "SFO", "PDX", "BTV", "BDL")))
+View(many_airports)
+```
+
+
+## Summarize variables
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp), std_dev = sd(temp))
+summary_temp
+```
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_temp
+```
+
+
+## Learning Check LC3.2
+Say a doctor is studying the effect of smoking on lung cancer for a large number of patients who have records measured at five-year intervals. She notices that a large number of patients have missing data points because the patient has died, so she chooses to ignore these patients in her analysis. What is wrong with this doctor’s approach?
+
+ANSWER: She's completely ignoring deaths related to lung cancer, which is a pretty big effect of smoking.
+
+
+## LC3.3
+Modify the earlier summarize() function code that creates the summary_temp data frame to also use the n() summary function: summarize(... , count = n()). What does the returned value correspond to?
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            count = n())
+summary_temp
+```
+
+
+
+## LC3.4
+Why doesn’t the following code work? Run the code line-by-line instead of all at once, and then look at the data. In other words, run summary_temp <- weather %>% summarize(mean = mean(temp, na.rm = TRUE)) first.
+
+
+```{r}
+summary_temp <- weather %>%   
+  summarize(mean = mean(temp, na.rm = TRUE)) %>% 
+  summarize(std_dev = sd(temp, na.rm = TRUE))
+summary_temp
+```
+
+
+## 3.4 group_by rows
+
+```{r}
+summary_monthly_temp <- weather %>% 
+  group_by(month) %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_monthly_temp
+```
+
+
+

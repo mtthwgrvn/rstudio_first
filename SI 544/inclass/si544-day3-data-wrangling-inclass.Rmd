@@ -1,0 +1,431 @@
+---
+title: "si544-day3-data-wrangling-inclass"
+author: "Matt Garvin"
+uniqname: "mgarvin"
+date: "9/18/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First, let's load the libraries we'll need (missing libraries?  use install.packages() to install them:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(nycflights13)
+library(fivethirtyeight)
+```
+
+## Pipes
+
+```{r}
+values <- c(1,2,3)
+```
+
+The usual approach is to pass the data frame as an argument, that is:
+
+```{r}
+sum(values)
+```
+
+Using pipes, we can say "take values then apply sum":
+
+```{r}
+values %>% sum
+```
+
+## Filtering
+
+(You might want to View(flights) in the Console.)
+
+```{r}
+alaska_flights <- flights %>%
+   filter(carrier == "AS")
+```
+
+```{r}
+portland_flights <- flights %>%
+   filter(dest == "PDX")
+```
+
+```{r}
+btv_sea_flights_fall <- flights %>%
+   filter(origin == "JFK" & (dest == "BTV" | dest == "SEA") & month >= 10)
+```
+
+We can use ',' instead of '&':
+
+```{r}
+btv_sea_flights_fall <- flights %>%
+   filter(origin == "JFK", (dest == "BTV" | dest == "SEA"), month >= 10)
+```
+
+
+```{r}
+not_BTV_SEA <- flights %>%
+ filter(!(dest == "BTV" | dest == "SEA"))
+```
+
+Oops:
+
+
+```{r}
+flights %>%
+ filter(!dest == "BTV" | dest == "SEA")
+```
+
+Lots of '|' (or) operators:
+```{r}
+many_airports <- flights %>%
+ filter(dest == "BTV" | dest == "SEA" | dest == "PDX" |
+        dest == "SFO" | dest == "BDL")
+```
+
+The '%in%' operator can replace lots of '|' operators:
+```{r}
+many_airports <- flights %>%
+ filter(dest %in% c("BTV", "SEA", "PDX", "SFO", "BDL"))
+```
+
+## (LC 544.3.1)
+Write code to create a dataframe containing only those flights arriving at Detroit (airport code DTW)
+
+```{r}
+# INSERT YOUR R CODE HERE
+detroit_flights <- flights %>% filter(dest == "DTW")
+```
+
+
+
+# Summarization
+
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp), std_dev = sd(temp))
+summary_temp
+```
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_temp
+```
+
+# Grouping
+
+```{r}
+summary_monthly_temp <- weather %>% 
+  group_by(month) %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_monthly_temp
+
+```
+
+Note that group_by doesn't change the data.frame, only the information about the data.frame:
+
+```{r}
+diamonds
+```
+
+
+```{r}
+diamonds %>% 
+  group_by(cut)
+```
+
+```{r}
+diamonds %>% 
+  group_by(cut) %>% 
+  summarize(avg_price = mean(price))
+```
+
+
+```{r}
+by_origin <- flights %>% 
+  group_by(origin) %>% 
+  summarize(count = n())
+by_origin
+```
+
+Grouping can also be done for multiple (nested) variables.  For example to group by origin and then by month:
+
+```{r}
+by_origin_monthly <- flights %>% 
+  group_by(origin, month) %>% 
+  summarize(count = n())
+by_origin_monthly
+```
+
+Note that the following will not work properly:
+
+```{r}
+
+by_origin_monthly_incorrect <- flights %>% 
+  group_by(origin) %>% 
+  group_by(month) %>% 
+  summarize(count = n())
+by_origin_monthly_incorrect
+```
+
+## (LC4.5) (LC == Learning Check)
+Recall from last class's notebook when we looked at plots of temperatures by months in NYC (Section ## Learning Check (LC3.23) ) . What does the standard deviation column in the summary_monthly_temp data frame tell us about temperatures in New York City throughout the year?
+
+INSERT YOUR ANSWER HERE; DON'T OVERTHINK THIS QUESTION!
+That the deviation between temperatures in a given month is relatively close to the mean. It appears the largest deviation is in January at 10.22.
+
+## Mutating
+
+Creating new variables based on existing ones.
+
+```{r}
+weather <- weather %>% 
+  mutate(temp_in_C = (temp - 32) / 1.8)
+```
+
+Hmmmm.  That didn't seem to work properly.  Let's handle the "missing values" by removing them (na == "not available" or "not applicable"; rm == "remove"; therefore na.rm == "remove values 
+that are not available).
+
+```{r}
+summary_monthly_temp <- weather %>% 
+  group_by(month) %>% 
+  summarize(mean_temp_in_F = mean(temp, na.rm = TRUE), 
+            mean_temp_in_C = mean(temp_in_C, na.rm = TRUE))
+summary_monthly_temp
+```
+
+Calculate a new variable "gain" that is the the difference of dep_delay and arr_delay:
+
+```{r}
+flights <- flights %>% 
+  mutate(gain = dep_delay - arr_delay)
+```
+
+
+
+```{r}
+gain_summary <- flights %>% 
+  summarize(
+    min = min(gain, na.rm = TRUE),
+    q1 = quantile(gain, 0.25, na.rm = TRUE),
+    median = quantile(gain, 0.5, na.rm = TRUE),
+    q3 = quantile(gain, 0.75, na.rm = TRUE),
+    max = max(gain, na.rm = TRUE),
+    mean = mean(gain, na.rm = TRUE),
+    sd = sd(gain, na.rm = TRUE),
+    missing = sum(is.na(gain))
+  )
+gain_summary
+```
+
+
+```{r}
+ggplot(data = flights, mapping = aes(x = gain)) +
+  geom_histogram(color = "white", bins = 20) +
+  labs(caption="Histogram of gain variable")
+```
+
+
+
+```{r}
+flights <- flights %>% 
+  mutate(
+    gain = dep_delay - arr_delay,
+    hours = air_time / 60,
+    gain_per_hour = gain / hours
+  )
+```
+
+
+## (LC4.11) 
+Could we create the dep_delay and arr_delay columns by simply subtracting dep_time from sched_dep_time and similarly for arrivals? Take a look at the values in those columns and comment on some challenges that you may encounter.
+
+INSERT YOUR ANSWER HERE
+You would get negative numbers correct? It may be more prudent to subtract sched_dep_time from dep_time and same for arrivals.
+
+# Sorting (arrange)
+
+```{r}
+freq_dest <- flights %>% 
+  group_by(dest) %>% 
+  summarize(num_flights = n())
+freq_dest
+```
+
+```{r}
+freq_dest %>% 
+  arrange(num_flights)
+```
+
+```{r}
+freq_dest %>% 
+  arrange(desc(num_flights))
+```
+
+
+## (LC 544.3.2)
+Which airport from the ```airports``` dataframe has the highest altitude?
+
+```{r}
+# INSERT YOUR R CODE HERE
+airports %>% 
+  arrange(desc(alt))
+```
+
+
+## Joining (inner_join)
+
+
+```{r}
+flights_joined <- flights %>%
+ inner_join(airlines, by = "carrier")
+``` 
+
+
+
+
+
+```{r}
+flights_with_airport_names <- flights %>%
+ inner_join(airports, by = c("dest" = "faa"))
+``` 
+
+
+```{r}
+named_dests <- flights %>%
+  group_by(dest) %>%
+  summarize(num_flights = n()) %>%
+  arrange(desc(num_flights)) %>%
+  inner_join(airports, by = c("dest" = "faa")) %>%
+  rename(airport_name = name)
+named_dests
+```
+
+```{r}
+flights_weather_joined <- flights %>%
+ inner_join(weather, by = c("year", "month", "day", "hour", "origin"))
+```
+
+```{r}
+joined_flights <- flights %>%
+ inner_join(airlines, by = "carrier")
+```
+
+## (LC 544.3.3)
+What's the name of the airport that has the largest mean departure delay from any of the New York airports?
+Hint: Copy the code above where we created named_dests and modify it.
+
+```{r}
+# INSERT YOUR R CODE HERE
+largest_dep_delay <- flights %>%
+  group_by(origin) %>%
+  summarize(mean_dep_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  arrange(desc(mean_dep_delay)) %>%
+  inner_join(airports, by = c("origin" = "faa")) %>%
+  rename(airport_name = name)
+largest_dep_delay
+
+```
+
+
+## Selecting
+
+```{r}
+flights %>%
+ select(carrier, flight)
+```
+
+```{r}
+flights_no_year <- flights %>%
+ select(-year)
+```
+
+
+```{r}
+flight_arr_times <- flights %>%
+ select(month:day, arr_time:sched_arr_time)
+```
+
+
+```{r}
+flights_reorder <- flights %>%
+ select(year, month, day, hour, minute, time_hour, everything())
+```
+
+```{r}
+flights_begin_a <- flights %>%
+ select(starts_with("a"))
+```
+
+```{r}
+flights_delays <- flights %>%
+  select(ends_with("delay"))
+```
+
+
+```{r}
+flights_time <- flights %>%
+ select(contains("time"))
+```
+
+## Renaming
+
+```{r}
+flights_time_new <- flights %>%
+ select(contains("time")) %>%
+ rename(departure_time = dep_time,
+        arrival_time = arr_time)
+```
+
+## Tidying
+
+```{r}
+library(fivethirtyeight)
+```
+
+```{r}
+drinks
+```
+
+```{r}
+drinks_smaller <- drinks %>% 
+  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>% 
+  select(-total_litres_of_pure_alcohol) %>% 
+  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
+drinks_smaller
+```
+
+## (LC 544.3.4)
+Add Canada to the list of countries in our drinks_smaller dataframe.  You might just want to copy and paste the above code block and edit it instead of trying to actually add Canada to the existing drinks_smaller dataframe.
+
+
+
+```{r}
+# INSERT YOUR R CODE HERE
+drinks_smaller <- drinks %>% 
+  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia", "Canada")) %>% 
+  select(-total_litres_of_pure_alcohol) %>% 
+  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
+drinks_smaller
+```
+
+```{r}
+drinks_smaller_tidy <- drinks_smaller %>% 
+  gather(key = type, value = servings, c(beer, spirit, wine))
+drinks_smaller_tidy
+```
+
+```{r}
+ggplot(drinks_smaller_tidy, 
+       aes(x = country, y = servings, fill = type)) +
+  geom_col(position = "dodge")
+```
+
+END OF NOTEBOOK

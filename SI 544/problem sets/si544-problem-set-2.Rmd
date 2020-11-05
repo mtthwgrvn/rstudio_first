@@ -1,0 +1,184 @@
+---
+title: "Problem Set 2 - Visualizations and Tidy Data"
+author: "Matt Garvin"
+uniqname: "mgarvin"
+date: "9/25/2020"
+output: html_document
+---
+# Problem Set 2 - Visualizations and Tidy Data
+
+The total score for this assignment will be 100 points, consisting of:
+  - 90 pts: Homework Questions
+  - 10 pts: Overall quality of spelling, grammar, punctuation, etc. of written sentences.
+  
+As in lecture and discussion, there are several ways to approach and answer these questions! There may not be a "best solution", but instead a variety of ways to interpret and analyze a given task. Be thoughtful in your responses below your code to explain why you chose the methods and representations in your analysis when prompted for a response.
+
+For further reference regarding quality writing, feel free to refer to Strunk & White’s Elements of Style: https://drive.google.com/file/d/1L0P7xJwjUGBvyb49mL3dw1Bt7hzRTiTl/view?usp=sharing 
+  
+## The Data
+
+We've been dealing with some pretty dire data on COVID-19.  Let's take a break from that by looking at something that's a bit more fun:
+board games.
+
+Contemporary board games provide a face to face experience rich in analytic opportunities and can spur discussions about UX design in the rules, materials, and game mechanics. Our data set comes from the popular board game site https://boardgamegeek.com, a resource used for reviewing and discussing board games.  Board Game Geek (BGG) serves as a hub for players to come together and gather data for other players to reference as they search out new and novel play experiences. This data set can help reveal some design choices that are favored by the board game community at large.
+
+Copy the file 'bgg_2018.csv' into your working directory (if necessary), fill in your name into the string assigned to *MY_UNIQNAME* , then execute the code block to load the packages into your environment. 
+
+
+```{r loadlibraries}
+
+MY_UNIQNAME = "mgarvin"
+
+# Initial setup for our environment
+library(tidyverse)
+library(ggplot2)
+
+# Reading the file in from your working directory
+data <- read_csv('bgg_2018.csv')
+
+```
+
+### Question 1 (10 points)
+
+Describe the shape of the distribution of ratings for the games in the dataset. (Do this for both avg_rating and geek_rating) Find the mean and median for avg_rating and geek_rating, then discuss which metric is an appropriate measure of the center for each distribution.
+
+```{r Question 1}
+ggplot(data, mapping=aes(x=avg_rating)) + 
+  geom_histogram(aes(y = ..density..), bins = 15, fill="blue") + 
+  stat_function(fun=dnorm, args=with(data, c(mean=mean(avg_rating), sd = sd(avg_rating))))
+
+ggplot(data, mapping=aes(x=avg_rating)) + 
+  geom_histogram(aes(y = ..density..), bins = 15, fill="blue") + 
+  stat_function(fun=dnorm, args=with(data, c(mean=median(avg_rating), sd = sd(avg_rating))))
+
+ggplot(data, mapping=aes(x=geek_rating)) + 
+  geom_histogram(aes(y = ..density..), bins = 15, fill="blue") + 
+  stat_function(fun=dnorm, args=with(data, c(mean=mean(geek_rating), sd = sd(geek_rating))))
+
+ggplot(data, mapping=aes(x=geek_rating)) + 
+  geom_histogram(aes(y = ..density..), bins = 15, fill="blue") + 
+  stat_function(fun=dnorm, args=with(data, c(mean=median(geek_rating), sd = sd(geek_rating))))
+
+avg_mean <- mean(data$avg_rating)
+geek_mean <- mean(data$geek_rating)
+
+avg_median <- median(data$avg_rating)
+geek_median <- median(data$geek_rating)
+
+sprintf("Average Rating Median: %1.4f, Geek Rating Median: %1.4f", avg_median, geek_median)
+
+sprintf("Average Rating Mean: %1.4f, Geek Rating Mean: %1.4f", avg_mean, geek_mean)
+
+```
+
+#### Q1 Response:
+
+avg_rating presents a relatively symmetrical distribution with a slightly positive skew. Whereas the geek_rating is much more positively skewed, meaning that the most frequent scores are low, while the tail is toward the high scores.The mean and median for both ratings are very close, but given that the median is the middle value of a sorted vector, I believe the median is a more appropriate measure to find the center of each distribution.
+Source: http://jukebox.esc13.net/untdeveloper/RM/Stats_Module_1/Stats_Module_19.html
+
+### Question 2 (5 points)
+
+The original data set includes some columns that will not be useful for our analysis. Create a new dataframe that **does not** include the game id, the bgg url, and the image url columns. Use the cleaned data frame to create another data frame containing the top 500 ranked games and assign it to a separate variable. 
+
+```{r Question 2}
+clean_df <- data %>%
+  select(-c(bgg_url, game_id, image_url))
+
+top_500 <- clean_df %>%
+  filter(rank == 1:500)
+
+```
+
+### Question 3 (20 points)
+
+Within the top 500 games there is a large variety of games with different player counts. Give both a numeric summary and a visualization to demonstrate the average rating, spread, and number of games for each maximum player count. Using this information, answer the following:
+
+How do the ratings of games appear to differ between games with different maximum player counts? 
+ What set of maximum player counts appear to have higher ratings?
+
+(For the rest of the assignment, use avg_rating for any prompts involving game rating.)
+
+
+```{r Question 3}
+
+q3 <- top_500 %>% 
+  group_by(max_players) %>% 
+  count(AVG = mean(avg_rating), Spread = sd(avg_rating)) %>% 
+  rename(num_games = n)
+
+ggplot(top_500, aes(x=factor(max_players), y=avg_rating)) +
+  geom_boxplot()
+
+ggplot(q3, aes(x = max_players, y = num_games)) +
+  geom_col()
+```
+
+#### Q3 Response:
+
+It appears that the games with 4-6 max players have the biggest spread in terms of average rating, and while games with 6 max players do have an outlier with a really high rating, there are more higher ratings outside the maximum Q3 than games with other maximum players.
+
+### Question 4 (15 points)
+
+Which game is owned by the most BGG users and what rank is it? How does the player count (including min players and max players) and play time for this game compare to other games in the top 500? Discuss your findings below the code block showing your code that found the values.
+
+```{r Question 4}
+ q4 <- top_500 %>% 
+  filter(owned == max(owned))
+ q4
+ 
+ zmin.play <- (q4$min_players - mean(top_500$min_players) ) / sd(top_500$min_players)
+ zmax.play <- (q4$max_players - mean(top_500$max_players) ) / sd(top_500$max_players)
+ ztime <- (q4$avg_time - mean(top_500$avg_time) ) / sd(top_500$avg_time)
+ 
+ sprintf("Minimum players Z score: %1.2f. Maximum players z score: %1.2f. Ztime: %1.2f", zmin.play, zmax.play, ztime)
+
+```
+
+#### Q4 Response:
+
+Catan is owned by the most BGG users and is ranked 272. Catan's min_players is within z=2, while max_players is within z=-1 and avg_time is z=1.
+
+### Question 5 (15 points)
+
+Does there appear to be a relationship between game weight (https://boardgamegeek.com/wiki/page/Weight) and the (maximum) number of players? Write your thoughts below the code block containing numerical analysis or a visualization. (You may find a boxplot helpful here.)
+```{r Question 5}
+ggplot(clean_df, aes(x = factor(max_players), y = weight))+
+  geom_boxplot()
+
+ggplot(clean_df, aes(x = max_players, y = weight))+
+  geom_line()
+```
+
+#### Q5 Response:
+
+I couldn't quite tell from the boxplot I made. However, this line graph seems to indicate that a higher max player count has a correlation to lower weight.
+
+### Question 6 (15 points)
+
+Create a plot showing the number of board games released by year. What trends do you notice?
+
+```{r Question 6}
+ q6 <- clean_df %>% 
+  group_by(year) %>% 
+  count(year) %>% 
+  rename(num_games = n)
+ q6
+ 
+ 
+ ggplot(q6, aes(x = year, y = num_games))+
+   geom_point()
+
+```
+
+#### Q6 Response:
+
+From the plot, you can clearly see the number of games released per year increase significantly in the latter half of the 20th century. The trend exhibits a steep incline to over 100 games per year after 2000 to over 200 per year beginning in 2009, to over 400 in 2015-16.
+
+## Question 7 (10 points)
+
+Which games have more votes than owners? Create a new column in your top 500 dataframe labeled vote_own_ratio expressing the ratio of votes to owners. 
+
+```{r Question 7}
+top_500$vote_own_ratio <- (top_500$owned / top_500$num_votes)
+
+```

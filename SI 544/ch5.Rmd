@@ -1,0 +1,47 @@
+---
+title: "Ch 5"
+author: "Me"
+date: "10/2/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(gapminder)
+```
+```{r}
+evals_ch5 <- evals %>%
+  select(ID, score, bty_avg, age)
+```
+
+```{r}
+glimpse(evals_ch5)
+```
+
+
+```{r}
+evals_ch5 %>%
+  sample_n(size = 5)
+```
+
+
+```{r}
+evals_ch5 %>%
+  summarize(mean_bty_avg = mean(bty_avg), mean_score = mean(score),
+            median_bty_avg = median(bty_avg), median_score = median(score))
+```
+
+
+```{r}
+evals_ch5 %>% select(score, bty_avg) %>% skim()
+```
+
+
+
+

@@ -1,0 +1,95 @@
+---
+title: "si544-day7-multiple-regression"
+author: "Matthew Garvin (mgarvin)"
+date: "10/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+As usual, load all the libraries that we'll need:
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+```
+Let's load the Szeged weather data:
+
+```{r}
+weather <- read_csv("https://github.com/umsi-data-science/data/raw/main/weatherHistory.csv")
+```
+
+## Learning Check 544.8.1: 
+
+Create a dataframe called "weather_day7" based on a random sample of 500 rows from weather that consists of only the following columns:
+temp (renamed from "Temperature (C)" ), apparent_temp (renamed from "Apparent Temperature ( C)", humidity (from Humidity), and wind_speed (from "Wind Speed (km/h)"
+
+
+```{r}
+# INSERT YOUR R CODE HERE
+set.seed(42)
+weather_day7 <- weather %>%
+  select(temp = `Temperature (C)`, apparent_temp = `Apparent Temperature (C)`, humidity = Humidity, wind_speed = `Wind Speed (km/h)`) %>%
+  sample_n(500)
+
+```
+
+Let's take a look at the relationship between apparent_temp and temp, as well as apparent_temp
+and humidity:
+
+```{r}
+ggplot(weather_day7, mapping=aes(x=temp, y=apparent_temp)) + geom_point()
+ggplot(weather_day7, mapping=aes(x=humidity, y=apparent_temp)) + geom_point()
+```
+
+## Learning Check 544.8.2:
+
+Create a regression that models "Apparent Temperature" in terms of "Temperature".  How good is your model?
+
+```{r}
+# INSERT YOUR R CODE HERE
+r_model <- lm(apparent_temp ~ temp, data = weather_day7)
+# Get regression table:
+get_regression_table(r_model)
+get_regression_summaries(r_model)
+```
+
+INSERT YOUR INTERPRETATION HERE.
+
+
+Let's look at a model of apparent_temperature that uses temp and humidity as explanatory
+variables:
+
+```{r}
+weather_model <- lm(apparent_temp ~ temp*humidity
+                   ,data=weather_day7)
+get_regression_table(weather_model)
+get_regression_summaries(weather_model)
+```
+
+
+## Learning Check 544.8.3:
+
+Create a linear regression model for apparent_temp that includes temperature, humidity, and wind
+speed as explanatory variables.  Calculate the apparent temperature when the temperature is
+20 degrees Celsius, the humidity 65%, and the wind speed 20 km/h.
+
+```{r}
+# INSERT YOUR R CODE HERE
+weather_model2 <- lm(apparent_temp ~ temp*humidity*wind_speed
+                   ,data=weather_day7)
+get_regression_table(weather_model2)
+get_regression_summaries(weather_model2)
+```
+
+```{r}
+-1.505 + 1.029*20 + 1.580*.65 +20*20*(-.005) + .65*20*(-0.359) + 20*.65*20*0.024
+```
+
+
+INSERT YOUR ANSWER HERE
+19.675
+

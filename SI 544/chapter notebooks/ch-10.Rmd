@@ -1,0 +1,33 @@
+---
+title: "ch-10"
+author: "Matthew Garvin"
+date: "11/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(tidyverse)
+library(moderndive)
+library(infer)
+```
+
+```{r}
+evals_ch5 <- evals %>%
+  select(ID, score, bty_avg, age)
+glimpse(evals_ch5)
+```
+```{r}
+ggplot(evals_ch5, 
+       aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "Beauty Score", 
+       y = "Teaching Score",
+       title = "Relationship between teaching and beauty scores") +  
+  geom_smooth(method = "lm", se = FALSE)
+```
+

@@ -1,0 +1,222 @@
+---
+title: "si544-day5-basic-regression"
+author: "Matthew Garvin"
+uniqename: "mgarvin"
+date: "10/4/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(gapminder)
+```
+
+## Load & Look
+
+
+```{r}
+evals_ch6 <- evals %>%
+  select(ID, score, bty_avg, age)
+```
+
+```glimpse``` can be helpful:
+
+```{r}
+glimpse(evals_ch6)
+```
+
+Alternatively, you can draw a random sample of some values and look at what you get:
+
+```{r}
+evals_ch6 %>% sample_n(5)
+```
+
+Now that you understand descriptive statistics and visualizations, let's take a shortcut:
+
+
+```{r}
+evals_ch6 %>%
+  select(score, bty_avg) %>%
+  skim()
+
+```
+
+```{r}
+evals_ch6 %>%
+  get_correlation(formula = score ~ bty_avg)
+```
+
+Equivalently:
+
+```{r}
+evals_ch6 %>%
+  summarize(correlation = cor(score, bty_avg))
+```
+
+Visualization:
+
+```{r}
+ggplot(evals_ch6, aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "Beauty Score", y = "Teaching Score",
+       title = "Scatterplot of relationship of teaching and beauty scores")
+```
+
+```{r}
+ggplot(evals_ch6, aes(x = bty_avg, y = score)) +
+  geom_jitter() +
+  labs(x = "Beauty Score", y = "Teaching Score",
+       title = "Scatterplot of relationship of teaching and beauty scores")
+```
+
+```{r}
+ggplot(evals_ch6, aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "Beauty Score", y = "Teaching Score",
+       title = "Relationship between teaching and beauty scores") +  
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+### Learning Check 544.5.1
+
+Repeat this for our handwriting data, looking at the relationship between dominant and non_dominant.  The handwriting dataset is available via
+https://raw.githubusercontent.com/umsi-data-science/data/main/handwriting.csv (remember that you can give read_csv a URL).
+
+First, load the data into a variable called ```handwriting```.
+
+```{r}
+# INSERT YOUR R CODE HERE
+handwriting <- read.csv("https://raw.githubusercontent.com/umsi-data-science/data/main/handwriting.csv")
+```
+
+1. Use glimpse() to get a "feel" for the handwriting data.
+
+```{r}
+# INSERT YOUR R CODE HERE
+glimpse(handwriting)
+```
+
+2. Use skim() to generate summary statistics for dominant and non-dominant times.
+
+```{r}
+# INSERT YOUR R CODE HERE
+handwriting %>%
+  select(dominant, nondominant) %>%
+  skim()
+```
+
+3. Calculate the correlation coefficient for dominant and non-dominant times.  What does that value tell you?
+
+```{r}
+# INSERT YOUR R CODE HERE
+handwriting %>% 
+  summarise(corr_coef = cor(dominant, nondominant))
+```
+
+The correlation coefficient is .705
+
+4. Create a scatterplot with non-dominant on the y (vertical) axis and dominant on the x (horizontal) axis.  Use R to draw a line through the data to show the relationship between dominant and non-dominant times.
+
+```{r}
+# INSERT YOUR R CODE HERE
+ggplot(handwriting, aes(dominant, nondominant)) +
+  geom_point() +
+    labs(x = "Dominant", y = "Nondominant",
+       title = "Relationship between dominant and nondominant") +  
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+
+## Simple Linear Regression
+
+```{r}
+# Fit regression model:
+score_model <- lm(score ~ bty_avg, data = evals_ch6)
+```
+
+
+```{r}
+# Get regression table:
+get_regression_table(score_model)
+```
+
+```{r}
+get_regression_summaries(score_model)
+```
+
+### Best fit
+
+```{r}
+regression_points <- get_regression_points(score_model)
+regression_points
+```
+
+Let's calculate the sum of squared residuals using a pipeline:
+
+```{r}
+regression_points %>%
+  mutate(squared_residuals = residual^2) %>%
+  summarize(sum_of_squared_residuals = sum(squared_residuals))
+
+```
+
+
+```{r}
+ggplot(regression_points, mapping=aes(x=residual)) + geom_histogram()
+```
+
+
+### Learning Check 544.5.2
+
+Repeat the above steps with the handwriting data from discussion section:
+
+1. Create a linear model (using the lm() function) to model non-dominant time as the outcome variable and dominant time as the explanatory one.
+
+```{r}
+# INSERT YOUR R CODE HERE
+handwriting_model <- lm(nondominant ~ dominant, data = handwriting)
+```
+
+2. Use get_regression_table() to get the coefficients for the regression model.
+
+```{r}
+# INSERT YOUR R CODE HERE
+get_regression_table(handwriting_model)
+```
+
+
+3. What would the expected value of non-dominant time be for a name that took 6 seconds to write with one's dominant hand?
+3.129 + 1.853 * 6 
+
+We can predict 14.247 seconds to write your name with your nondominant hand.
+
+4. Use get_regression_summaries() to get information about how "good" the model is.  Comment on how much variance is explained by the model.  What's the average deviation from the predicted value?
+
+```{r}
+# INSERT YOUR CODE HERE
+get_regression_summaries(handwriting_model)
+```
+
+.49 is the variance, and 1.67 is the average deviation.
+
+5. Identify the two most extreme residual values.  What do those values mean?  Can you infer anything about the individuals with those values?
+
+```{r}
+# INSERT YOUR R CODE HERE
+regression_points <- get_regression_points(handwriting_model) %>% 
+  summarise(max_residual = max(residual, na.rm = TRUE), min_residual = min(residual, na.rm = TRUE))
+regression_points
+
+get_regression_points(handwriting_model) %>% arrange(desc(residual))
+get_regression_points(handwriting_model) %>% arrange(residual)
+```
+
+max residual = 12.694, min residual = -10.662
+It would seem that we can infer that the individual with the max residual is ambidextrous.
+

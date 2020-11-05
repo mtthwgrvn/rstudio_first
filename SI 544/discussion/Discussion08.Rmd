@@ -1,0 +1,357 @@
+---
+title: "DS8"
+author: "Matthew Garvin uniqname: mgarvin"
+date: "10/27/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+[Cleaning note: take out all the #Solution pieces]
+# Outline
+1. Review Ch7 and Ch8
+2. Construct confidence intervals for difference in sample proportion (Section 8.6)
+
+# Review: Statistical inference for summary statistic
+1. From one sample, we can get one summary statistic
+2. Yet, to conduct statistical inference for the summary statistic of interest, we need the distribution of the such summary statistic.
+
+To get our hands on the distribution of a summary statistic, we can:
+1. Collect multiple samples again and again,
+2. Or, we can do it in spirit and use the bootstrapping resampling method.  
+
+Once we get the distribution of a summary statistic, we can draw confidence intervals for the summary statistic of interest.
+
+As [linked here](https://moderndive.com/7-sampling.html#sampling-conclusion-table), Section 7.5.1 introduces a good number of summary statistics.
+
+## Demo 1: getting at the distribution for the proportion of red balls in `bowl`
+```{r}
+library(moderndive)
+library(dplyr)
+library(infer)
+library(ggplot2)
+bowl # this is a tibble from the moderndive library
+```
+```{r}
+# bowl is a "tibble" from moderndive library. We used it in Ch 7.
+bowl %>%
+  specify(response = color, success = "red") %>%
+  generate(reps=1000, type="bootstrap") %>% 
+  calculate(stat = "prop") %>%
+  visualise() 
+```
+## Interlude: what does `generate()` function get us?
+Let's take a look at what we get with `generate(reps=1)`: it is a dataframe of 2400 rows!
+```{r}
+bowl %>%
+  specify(response = color, success = "red") %>%
+  generate(reps=1, type="bootstrap")  # with reps = 1, we see that the full resampled dataframe has 2400 rows, identical to the number of rows in bowl
+```
+```{r}
+nrow(bowl)
+```
+
+## Demo 2: draw confidence intervals for the proportion of red balls
+From each sample, a summary statistic for "proportion of red balls" is calculated with `calculate(stat = "prop")`.
+```{r}
+bowl %>%
+  specify(response = color, success = "red") %>%
+  generate(reps=1000, type="bootstrap") %>%
+  calculate(stat = "prop")
+```
+
+### Step 1: collect the bootstrap_distribution_red_proportion
+```{r}
+bootstrap_distribution_red_proportion =  bowl %>%
+  specify(response = color, success = "red") %>%
+  generate(reps=1000, type="bootstrap") %>%
+  calculate(stat = "prop")
+
+bootstrap_distribution_red_proportion
+```
+
+### Step 2: calculate the confidence intervals
+
+#### Percentile method
+The proportion method directly examines the boostrap distribution and extracts the ticks corresponding to the 2.5% and 97.5% percentile. (By convention, we usually construct 95% confidence intervals by default.)
+```{r}
+# Take a look at what is stored in ci_proportion
+ci_red_proportion  = get_confidence_interval(bootstrap_distribution_red_proportion, type="percentile",
+                                             level=0.95)
+  # Note: ci_red_proportion denotes the interval in which 95% of the summary statistics are found.
+
+# Let's confirm what we just said about ci_percentile_method
+bootstrap_distribution_red_proportion %>%
+  # Note: if you are interested in how "bewteen" function works, please look it up yourself.
+  filter(between(stat, ci_red_proportion[1], ci_red_proportion[2])) %>%
+  count()
+# ==> Note, we used `reps=1000` when constructing bootstrap_distribution_red_proportion. Thus, there are 1000 random samples produced, thus 1000 entries of "red proportion" in total.
+```
+
+We also need to calculate the `point_estimate` using the original sample: the `bowl` dataframe.
+```{r}
+# Step 1: get a summary of the existing bowl dataframe
+sample_proportions = bowl %>%
+  group_by(color) %>%
+  summarise(count = n()) %>%
+  mutate(proportion = count / nrow(bowl))
+sample_proportions
+```
+
+
+```{r}
+# Step 2: extract the point estimate
+red_proportion = sample_proportions$proportion[1]
+```
+
+
+```{r}
+ci_standard_error_method  = get_confidence_interval(bootstrap_distribution_red_proportion, 
+                                                    type = "se", point_estimate = red_proportion)
+```
+
+### Step 3: draw the confidence intervals
+These two confidence intervals do not necessarily overlap.
+```{r}
+bootstrap_distribution_red_proportion %>%
+  visualise() +
+  shade_ci(endpoints = ci_standard_error_method, color = 'blue')+
+  shade_ci(endpoints = ci_red_proportion, color = 'red')
+```
+
+
+
+# Chapter8: Section 8.6
+We will walk through section 8.6 as written in the textbook.
+We want to know - “Is yawning contagious?”. If you see someone else yawn, are you more likely to yawn?
+
+```{r}
+yawn_experiment_data<-mythbusters_yawn
+```
+
+
+## Part1: Look at the data
+Columns
+
+* `subj`: The participant ID with values 1 through 50.
+* `group`: A binary treatment variable indicating whether the participant was exposed to yawning. "seed" indicates the participant was exposed to yawning while "control" indicates the participant was not.
+* `yawn`: A binary response variable indicating whether the participant ultimately yawned.
+```{r}
+mythbusters_yawn
+```
+
+Get the proportions of people who yawned in different group
+
+1. proportion of people who were exposed to yawning and yawned (seed-yes)
+2. proportion of people who were not exposed to yawning and still yawned (control-yes)
+
+### Exercise 1: calculate the difference in proportion of people who yawned in seed vs control group
+Calculate the difference in proportion and assign it to variable `point_estimate_diff_in_prop`.
+
+```{r}
+yawn_experiment_data<-mythbusters_yawn
+# get counts for each group and outcome
+counts<-yawn_experiment_data %>% 
+  group_by(group, yawn) %>% 
+  summarize(count = n())
+counts
+```
+
+```{r}
+# Jot down the numbers here
+#Solution:
+point_estimate_diff_in_prop =  10 / (24 + 10) - 4/(12 + 4)
+point_estimate_diff_in_prop
+```
+
+### Alterantively, we can use the `inter` libarary:
+Without involving the `generate()` function, we are dealing with the original sample.
+* Note, `order=` is an useful option for `calculate()`.
+```{r}
+yawn_experiment_data %>%
+  specify(yawn ~ group, success="yes") %>%
+  calculate(stat = "diff in props", order = c("seed", "control"))
+```
+
+
+## Part 2: Boostrap Distribution
+1. construct the bootstrap distribution for `p_seed_hat - p_control_hat`
+
+2. construct 95% confidence interval `p_seed_hat - p_control_hat`
+
+
+### Demo 2.1: specify() which variables are of interest using the y ~ x syntax:
+
+Our response variable is yawn: whether or not a participant yawned. It has levels "yes" and "no".
+
+The explanatory variable is group: whether or not a participant was exposed to yawning. It has levels "seed" (exposed to yawning) and "control" (not exposed to yawning).
+
+We are interested in getting people who yawned (success="yes")
+```{r}
+v = mythbusters_yawn %>% 
+  specify(formula = yawn ~ group, success="yes")
+v
+# Here, take a look at the R Console output: it is a "tibble" with two pieces of metadata:
+  # Response: yawn (factor)
+  # Explanatory: group (factor)
+```
+
+
+
+### Exercise 2.2: Perform bootstrap resampling with replacement 1000 times
+We generate 1000 replicates, or, in other words, we bootstrap resample the 50 participants with replacement 1000 times.
+```{r}
+mythbusters_yawn %>% 
+  specify(formula = yawn ~ group, success="yes")%>%
+  generate(reps = 1000, type = "bootstrap")
+```
+
+
+### Exercise 2.3: generate the "diff in props" summary statistic for each of the 1000 bootstrap samples
+
+Reuse the following code to generate the summary statistic we are after, and assign to varaible `bootstrap_distribution_diff_in_Prop`
+```
+calculate(stat = "diff in props", order = c("seed", "control"))
+``` 
+### Exercise: 
+```{r}
+# Solution:
+bootstrap_distribution_diff_in_Prop <- mythbusters_yawn %>% 
+  specify(formula = yawn ~ group, success = "yes") %>% 
+  generate(reps = 1000, type = "bootstrap") %>% 
+  calculate(stat = "diff in props", order = c("seed", "control"))
+bootstrap_distribution_diff_in_Prop
+```
+### Demo 2.4: Visualize the results
+```{r}
+visualize(bootstrap_distribution_diff_in_Prop) +
+  geom_vline(xintercept = point_estimate_diff_in_prop)
+```
+
+### Exercise 2.5: Compute confidence interval using the percentile method
+```{r}
+bootstrap_distribution_diff_in_Prop %>% 
+  get_confidence_interval(type = "percentile", level = 0.95)
+```
+
+```{r}
+visualize(bootstrap_distribution_diff_in_Prop) + 
+  shade_confidence_interval(endpoints = c(-0.2238859, 0.3015873), color="green", fill="orange")
+```
+
+### Exercise 2.6: Compute confidence interval using the Standard Error method
+Since the bootstrap distribution is roughly bell-shaped, we can construct a confidence interval using the standard error method as well. To do this, we need to specify the center of the interval using the `point_estimate` argument.
+
+Recall, we constructed the point estimate for the difference in proportion using:
+```{r}
+point_estimate_diff_in_prop =  10 / (24 + 10) - 4/(12 + 4)
+point_estimate_diff_in_prop
+# Or,
+yawn_experiment_data %>%
+  specify(yawn ~ group, success="yes") %>%
+  calculate(stat = "diff in props", order = c("seed", "control")) -> summary_table
+summary_table$stat
+```
+
+```{r}
+# Calculate the confidence interval
+# Solution: 
+myth_ci_se <- bootstrap_distribution_diff_in_Prop %>% 
+  get_confidence_interval(type = "se", point_estimate = point_estimate_diff_in_prop)
+myth_ci_se
+```
+
+
+```{r}
+# Draw the confidence interval
+# Solution:
+visualize(bootstrap_distribution_diff_in_Prop) + 
+  shade_confidence_interval(endpoints = c(-0.2142519	, 0.3015873), color = "blue", fill="yellow")
+```
+Question: when can we use the Standard error method to compute confidence intervals? 
+Answer: when the distribtuion for the summary statistic composed using
+boostrapping is "Normal" enough ==> you can justify this visually.
+
+### 2.7 Is yawning contagious? - Interpreting confidence interval
+If this construction procedure is repeated 100 times, then we expect about 95 of the confidence intervals to capture the true value of `p_seed_hat - p_control_hat`. In other words, if we gathered 100 samples of n= 50 participants from a similar pool of people and constructed 100 confidence intervals each based on each of the 100 samples, about 95 of them will contain the true value of `p_seed_hat - p_control_hat` while about five won’t. Given that this is a little long winded, we use the shorthand interpretation: we’re 95% “confident” that the true difference in proportions `p_seed_hat - p_control_hat` is between (-0.238, 0.302).
+
+We wanted to know - “Is yawning contagious?”. If you see someone else yawn, are you more likely to yawn?
+The 95% confidence interval contains zero. If `p_seed_hat - p_control_hat` were equal to 0, then there would be no difference in proportion yawning between the two groups. This would suggest that there is no associated effect of being exposed to a yawning recruiter on whether you yawn yourself.
+
+
+# Helpful technical notes
+These are materials we generated while preparing for this discussion section. These are materials for your reference.
+
+## Review: Three ways to draw random samples
+* `sample_n`: need `replace=TRUE`.
+* `rep_sample_n` and
+* `specify(...) %>% generate( ... )`
+
+```{r}
+library(moderndive)
+library(dplyr)
+library(infer)
+library(ggplot2)
+bowl # this is a tibble from the moderndive library
+```
+### Demo: generate 1 random sample of 50 rows
+Claim: that `sample1`, `sample2` and `sample3` are identical samples. You can verify this visually, or using whatever data wrangling techniques you know of.
+
+```{r}
+set.seed(1)
+sample1 = bowl %>% 
+             sample_n(size=50, replace=TRUE)
+set.seed(1)
+sample2 = bowl %>%
+  rep_sample_n(  size=50, replace= TRUE,
+                       reps = 1
+                       )
+set.seed(1)
+sample3 = bowl %>%
+  specify(response = color, success="red") %>%
+  generate(size=50, reps=1, type="bootstrap") %>% # note, size=50 does nothing here.
+  slice(0:50)
+```
+
+Note, for the `infer` library, the bootstrap sample will always be the same "length" as the original sample. This is a reasonable convention to keep.
+
+
+### Demo: bootstrapped samples are randomly redrawn.
+```{r}
+# What if we run the same chunk of code twice? Are we operating on the same randomly redrawn bootstrap sample? 
+bowl %>%
+  specify(response = color, success="red") %>%
+  generate(reps=99, type="bootstrap") %>% # note, size=50 does nothing here.
+  calculate(stat="prop")
+
+# Without resetting the seed, let's run it again.
+bowl %>%
+  specify(response = color, success="red") %>%
+  generate(reps=99, type="bootstrap") %>% # note, size=50 does nothing here.
+  calculate(stat="prop")
+```
+
+
+
+
+## Cheatsheet for the `infer` library
+
+Moving forward, we will rely heavily on the `infer` library. Here are functions covered in Chapter 7 and Chapter 8.
+* `specify(response = var_of_interst)`:
+    * Note, you need to use `success = "string_value"` when estimating **sample proportion**.
+* `generate(reps = 1000)`: only relevant when you 
+    * You can choose your own values for `reps`.
+    * You don't need to bother with the `type` argument here. (You can read more by running `help(generate, package = 'infer')` in the Console.)
+    * You only need the `generate()` function when you want to generate bootstrapped random samples. 
+* `calculate(stat = "a_string_argument")`:
+    * `stat` is an argument you provide to the `calculate` function.
+    * `stat` only accepts strings `%in%  c("mean", "median", "sum", "sd", "prop", "count", "diff in means", "diff in medians", "diff in props", "Chisq", "F", "slope", "correlation", "t", "z", "ratio of props", "odds ratio")`
+    * When using `stat="diff in props"`, we also need to specify `order = c("category1", "category2")`.
+* `get_confidence_interval(level = 0.95, type = ...)`:
+    * To calculate (lower_ci, upper_ci) using Standard error method: 
+         `get_confidence_interval(level = 0.95, type = "se", point_estimate = numerical_value_for_sample_mean)`
+    * To calculate (lower_ci, upper_ci) using P
+         `get_confidence_interval(level = 0.95, type = "percentile")`
+* `visualize()`: plot out a distribution (histogram)
+    * `+shade_ci(endpoints = c(lower_ci, upper_ci) ... )`

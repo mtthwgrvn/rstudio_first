@@ -1,0 +1,55 @@
+---
+title: 'SI 544 Day 2: Visualization'
+author: "Chris Teplovs (cteplovs)"
+date: "9/1/2020"
+output: html_document
+---
+
+## Day 2: Libraries
+
+Before we get started, let's load the libraries that we'll need for today:
+
+```{r loadlibraries}
+
+library(nycflights13)
+library(ggplot2)
+library(dplyr)
+library(gapminder)
+library(knitr)
+library(readr)
+
+```
+
+## Gapminder
+
+Here's the code to load the Gapminder data.  
+Note that we are filtering the data so we only get the data from the year 2007, and then we drop the year column (why?).
+We also rename some columns so that they're easier to deal 
+with in the code. For example, we use lowercase for the variable names and we also drop the spaces in the variable names.
+
+
+```{r gapminder}
+
+gapminder_2007 <- gapminder %>% 
+  filter(year == 2007) %>% 
+  select(-year) %>% 
+  rename(
+    Country = country,
+    Continent = continent,
+    `Life Expectancy` = lifeExp,
+    `Population` = pop,
+    `GDP per Capita` = gdpPercap
+  )
+```
+
+You might want to View(gapminder_2007) in the Console.
+
+```{r}
+ggplot(data = gapminder_2007, 
+       mapping = aes(x = `GDP per Capita`, 
+                     y = `Life Expectancy`, 
+                     size = Population, 
+                     color = Continent)) +
+  geom_point() +
+  labs(x = "GDP per capita", y = "Life expectancy")
+```

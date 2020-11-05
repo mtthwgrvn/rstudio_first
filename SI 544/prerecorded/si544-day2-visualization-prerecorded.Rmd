@@ -1,0 +1,177 @@
+---
+title: 'SI 544 Day 2: Visualization'
+author: "Matt Garvin (mgarvin)"
+date: "9/1/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Day 2: Libraries
+
+Before we get started, let's load the libraries that we'll need for today:
+
+```{r loadlibraries}
+
+library(nycflights13)
+library(ggplot2)
+library(dplyr)
+library(gapminder)
+library(knitr)
+library(readr)
+
+```
+
+## Gapminder
+
+Here's the code to load the Gapminder data.  
+Note that we are filtering the data so we only get the data from the year 2007, and then we drop the year column (why?).
+We also rename some columns so that they're easier to deal 
+with in the code. For example, we use lowercase for the variable names and we also drop the spaces in the variable names.
+
+
+```{r gapminder}
+
+gapminder_2007 <- gapminder %>% 
+  filter(year == 2007) %>% 
+  select(-year) %>% 
+  rename(
+    Country = country,
+    Continent = continent,
+    `Life Expectancy` = lifeExp,
+    `Population` = pop,
+    `GDP per Capita` = gdpPercap
+  )
+```
+
+You might want to View(gapminder_2007) in the Console.
+
+```{r}
+ggplot(data = gapminder_2007, 
+       mapping = aes(x = `GDP per Capita`, 
+                     y = `Life Expectancy`, 
+                     size = Population, 
+                     color = Continent)) +
+  geom_point() +
+  labs(title="Gapminder demo", x = "GDP per capita", y = "Life expectancy")
+```
+```{r}
+alaska_flights <- flights %>% 
+  filter(carrier == "AS")
+```
+
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + geom_point()
+```
+```{r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram(binwidth = 5, color = "white") + facet_wrap(~ month)
+```
+```{r}
+ggplot(data = weather, mapping = aes(x = month, y = temp)) + geom_boxplot()
+```
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = sched_dep_time, y = sched_arr_time)) + geom_point()
+```
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = distance, y = air_time)) + geom_boxplot()
+```
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + geom_point(alpha = 0.2)
+```
+
+```{r}
+ggplot(data = alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + geom_jitter(width = 30, height = 30)
+```
+``` {r}
+ggplot(data = early_january_weather, mapping = aes(x = time_hour, y = temp)) + geom_line()
+```
+
+``` {r}
+ggplot(data = early_january_weather, mapping = aes(x = time_hour, y = visib)) + geom_line()
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram()
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram(color = "white")
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram(color = "white", fill = "steelblue")
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram(bins = 40, color = "white")
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram(binwidth = 10, color = "white")
+```
+``` {r}
+ggplot(data = weather, mapping = aes(x = temp)) + geom_histogram(binwidth = 5, color = "white") + facet_wrap(~ month, nrow = 4)
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = month, y = temp)) + geom_boxplot()
+```
+
+``` {r}
+ggplot(data = weather, mapping = aes(x = factor(month), y = temp)) + geom_boxplot()
+```
+
+``` {r}
+fruits <- tibble(fruit = c("apple", "apple", "orange", "apple", "orange"))
+fruits_counted <- tibble(fruit = c("apple", "orange"), number = c(3, 2))
+ggplot(data = fruits, mapping = aes(x = fruit)) + geom_bar()
+```
+
+``` {r}
+ggplot(data = fruits_counted, mapping = aes(x = fruit, y = number)) +
+  geom_col()
+```
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier)) +
+  geom_bar()
+```
+
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
+  geom_bar()
+```
+
+
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier, color = origin)) +
+  geom_bar()
+```
+
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
+  geom_bar(position = "dodge")
+```
+
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
+  geom_bar(position = position_dodge(preserve = "single"))
+```
+
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
+  geom_bar() + facet_wrap(~ origin, ncol = 1)
+```
+``` {r}
+ggplot(data = flights, mapping = aes(x = carrier)) + geom_bar()
+```
+
+``` {r}
+ggplot(flights, aes(x = carrier)) + geom_bar()
+```
+``` {r}
+flights_counted <- flights %>% group_by(carrier) %>% count()
+```

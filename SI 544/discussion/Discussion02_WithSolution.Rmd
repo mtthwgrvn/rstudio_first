@@ -1,0 +1,211 @@
+---
+title: "Worksheet for Discussion 2"
+author: "Please put down your name here"
+uniquename: "Please fill in your uniquename"
+output: html_document
+---
+# Plotting exercises
+
+## Overview:
+Over the lecture last week, we went through the following three Known Graphs:
+1. Scatter plot
+2. Line plot 
+3. Histogram
+
+# With everything going on in the world, let data make us feel empowered. Why don't we do COVID plotting?
+* Where to get the data?
+    * <https://covid19datahub.io/articles/api/r.html>
+* What to replicate?
+    * CDC COVID Data Tracker - trends:
+      <https://covid.cdc.gov/covid-data-tracker/#trends_dailytrends>
+
+## Step 1: Installing the package
+R has a COVID19 package that contains data on the status of the pandemic from
+around the world for different countries. 
+
+```{r}
+# install the package - run the following command (without the "# " piece) in # Console
+# install.packages("COVID19")
+
+# load the package
+library("COVID19")
+```
+
+# Exercise 1. Line graph: new cases over time
+
+## Get data for the US
+```{r, echo = TRUE, message=FALSE}
+US_cases <- covid19(country = "US")
+```
+
+### Explore what we have
+```{r}
+library(dplyr)
+glimpse(US_cases)
+```
+
+
+## Create new a column called "new_cases" for US from the existing data
+```{r}
+# This chunk will make sense after Friday's lecture
+# We create a new column named "new_cases", to represent the increase in the number of confirmed cases on that day
+US_cases <- US_cases %>% 
+  mutate(confirmed_yesterday = lag(confirmed, n=1), # create column that is previous days value                            
+         new_cases = confirmed - confirmed_yesterday) # calculate difference
+```
+
+### Explore what we got after adding a new column
+```{r}
+glimpse(US_cases)
+```
+
+### Check that the new_cases column is correct
+Subtract the confirmed case counts for two consecutive days to get the number of new_cases for a later date
+```{r}
+library(knitr)
+kable(
+    head( US_cases[c( 'date', 'new_cases','confirmed')],
+          n=10
+    )
+)
+```
+
+## Get new_cases for Canada
+```{r}
+Canada_cases <- covid19(country = "CAN")
+# Create 
+Canada_cases <- Canada_cases %>% 
+  mutate(confirmed_yesterday = lag(confirmed, n=1), # create column that is previous days value                            
+         new_cases = confirmed - confirmed_yesterday) # calculate difference
+```
+
+## Exercise 1: Why is Chris in Canada
+In this exercise, we will plot line graphs to compare new cases in US and Canada.
+
+### Part 1: Line graph for new cases in the US
+Draw a line plot with `date` on the x-axis and `new_cases` on the y-axis, using the `US_cases` dataframe.
+```{r}
+# Type your code here
+library(ggplot2)
+ggplot(US_cases, aes(x = date, y=new_cases))+
+  geom_line() 
+```
+
+### Part 2: Line graph for new cases in the Canada
+```{r}
+# Type your code here
+ggplot(Canada_cases, aes(x = date, y=new_cases))+
+  geom_line() 
+```
+
+### Part 3: wait, but why is Chris in Canada?
+Try to overlay the two line graphs with the same x-axis. Use different colors to
+differentiate the two lines.
+
+```{r}
+# Type your code here
+# Hint: first, plot one line graph as usual; 
+#       then, "add" the second line graph to the one you created in the first step 
+#       (recall adding layers from the lecture).
+
+# Solution:
+# Plotting US vs Canada
+ggplot(Canada_cases,  aes(x = date, y=new_cases))+
+  geom_line(color = 'red') + 
+  geom_line(data = US_cases, aes(x = date, y = new_cases), color='blue')
+```
+
+
+# Exercise 2: How well are the states testing for COVID19? (Snapshot of Saturday, 2020-09-12)
+
+## Setting things up
+Get state-level data from the dataset 
+```{r}
+US_statelevel = covid19(country = "US", level = 2)
+# Check and confirm that the `administrative_area_level_2` column contains the State info;
+# These are the available occurrances of each state in the dataset.
+table(US_statelevel$administrative_area_level_2)
+```
+
+Take a snapshot of 2020-09-12, and plot the histogram of number of tests per 100,000 population:
+```{r}
+# These will become natural after the lecture on Friday :)
+df_2020_09_12 = US_statelevel %>%
+  filter(date == "2020-09-12")
+
+# And, plot using "pipes"
+df_2020_09_12 %>% 
+  mutate(tests_per_100000 = tests / population * 100000) %>%
+  ggplot(mapping = aes(x = tests_per_100000)) +
+  geom_histogram()
+```
+From what you plotted above, what is the approx. testing rate for the majority of the states?
+
+## Exercise 2.1: replicate the histogram above
+Let's do it step-by-step here: 
+
+### Step 1: construct a dataframe with "tests_per_100000" column
+```{r}
+# Let's do it step by step
+df_Sunday =  df_2020_09_12 
+# Pause: check how many columns does df_Sunday have?
+df_Sunday = df_Sunday %>% 
+  mutate(tests_per_100000 = tests / population * 100000)
+# Pause: check again how many columns does df_Sunday have?
+```
+This is a preview of the `mutate` function: it keeps all columns in the
+dataframe and add the ones that are newly created per its arguments.
+
+### Step 2: reproduce the histogram for the distribution of `tests_per_100000`
+Note, please use `color=` argument and `binwidth=` argument to make your
+histogram more readable.
+```{r}
+# Type your code here
+ggplot(df_Sunday, aes( x = tests_per_100000)) + 
+  geom_histogram(color="black", binwidth = 5000)
+```
+What do you observe? In particular, which bin is the tallest? What does this
+imply?
+
+
+## Exercise 3: construct a bar-plot of tests_per_100000 over all the states
+```{r}
+# Prep: we need to recode the state variable, as below
+df_Sunday$state = df_Sunday$administrative_area_level_2
+```
+
+Now, use the newly created `state` variable to plot the bar plot.
+
+```{r}
+# Type your code here
+ggplot(df_Sunday, aes( x = state, y = tests_per_100000))+
+  geom_col() +
+  labs(caption="A bar chart of testing rate for different states")
+```
+
+Can you read the text labels on the x-axis, for all the states? If not, try to
+"add" the following code towards the end of your chunk:
+```
+  theme(axis.text.x = element_text(angle=60, hjust=1)) +
+```
+
+```{r}
+#We can improve the look and feel of the labels using the theme option
+ggplot(df_Sunday, aes( x = state, y = tests_per_100000))+
+  geom_col() +
+  labs(caption="A bar chart of testing rate for different states") +
+  theme(axis.text.x = element_text(angle=60, hjust=1))
+```
+
+From the histogram, we saw that a majority of states are testing around 20,000
+out of 100,000 (or 2 out of 10). Can we confirm this in the bar plot?
+```{r}
+# Here, we draw a line at 20000 and check if what the histogram told us makes sense
+# To begin with, we draw the same bar plot using geom_col:
+ggplot(df_Sunday, aes( x = state, y = tests_per_100000))+
+  geom_col() +
+  labs(caption="A bar chart of testing rate for different states") +
+  theme(axis.text.x = element_text(angle=60, hjust=1)) +
+# Lastly, we add the horizontal line
+  geom_abline(slope=0, intercept = 20000, color='red') #draw a horizontal line (slope=0)
+```

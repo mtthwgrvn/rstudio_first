@@ -1,0 +1,217 @@
+---
+title: "Week1_Discussion_WithSolution"
+author: "Matt Garvin"
+date: "9/10/2020"
+output: html_document
+---
+
+# Introduction
+This in-class notebook is designed to get you used to working with R and
+Rstudio. People learn through play, so feel free to play around. Experiment.
+Try things. If you end up breaking R, you can just restart the kernel.
+
+If you find this easy, be willing to help classmates during breakout sessions.
+If you find it difficult, don't be shy about asking your neighbors for help.
+
+## Learning objectives (pending)
+1. Get R and Rstudio installed, and install packages.
+2. Get used to getting `help` with `help()` function.
+3. Create and work with variables, vectors.
+
+# Demo
+
+## Prepare your R environment
+1. Create a new R Markdown file through the menu: `File/New File/R Markdown`. 
+  This shall set your R+Rstudio installation ready for manipulating the `*.Rmd` 
+  notebook files.
+2. Try to install and load packages, as introduced in the 
+   [Chapter 1](https://moderndive.com/1-getting-started.html) of the textbook.
+   Execute the following command in the Console (Ctrl+2) - same for MAC and WINDOWS
+  ```
+  install.packages("dplyr")
+  install.packages("knitr")
+  ```
+3. "Knit" the Rmd document into HTML.
+    * Keyboard Shortcut: `Ctrl+Shift+K`,
+    * Or, through the Menu: `File - Knit Document`.
+    * Or, through the Knit icon at the top of this pane.
+
+### How to not knit the document
+1. Delete a backtick sign from "chunks" (backtick is the key to the left of number 1, on most keyboards)
+2. Typos in the header of the chunk: `FALSE` as `False` will fail us.
+3. For macOS, missing the [XQuartz](https://www.xquartz.org/) program (which is a X-server).
+
+# R basics
+
+## Special notes
+* In R, `TRUE` and `FALSE` denote the binary values. This is different from the
+  `True` and `False` spellings in Python.
+* Naming conventions: 
+    1. Object names cannot begin with a number.
+    2. Object names cannot contain symbols used for mathematics or to denote
+       other operations native to R. These symbols include 
+       `$`, `@`, `!`, `^`, `+`, `-`, `/`, and `*`.
+
+## Assigning values to variables
+You can assign single values to elements.
+    ```{r}
+    # You can assign a single value
+    my_variable <- 7.3
+    # You can even assign an irrational number
+    v <- pi
+    # You can create vectors using the c() function
+    vec <- c(5, 3, 0.2, -20)
+    ```
+
+What happens in the Environment pane as we execute the command below?
+
+
+### Exercise 1: Create the following variables.
+
+Ensure that you can see them in the
+**Environment** tab, which should be on the top right of the RStudio
+window.
+
+  Variable Name                   Value
+  ------------------------------- ------------------
+  x                               2
+  y                               25, 0, -4, 0.09
+  vec1                            1, 2, 3, 4, 5, 6
+  super.long.variable.name        0
+  another_long_variable_name      1
+
+    ```{r}
+    x <- 2
+    y <- c(25, 0, -4, 0.09)
+    vec1 <- c(1, 2, 3, 4, 5, 6)
+    super.long.variable.name <- 0
+    another_long_variable_name <- 1
+    ```
+
+## Basic Operations
+
+For each of the following expressions **FIRST write down what you
+think R will give you (make a guess).** Then see what R actually does
+give you. Make sure you understand why it gave you the answer it did.
+
+(A) y-x 
+(B) y+5
+(C) vec1*x 
+(D) vec1/super.long.variable.name
+(E) c(y, vec1)
+(F) vec1 + y 
+(G) vec1*vec1
+(H) sqrt(y) 
+(I) sum(y)
+
+
+
+    ```{r}
+    y - x
+    y + 5
+    vec1 * x
+    vec1/super.long.variable.name
+    c(y, vec1)
+    vec1 + y
+    vec1*vec1
+    sqrt(y)
+    sum(y)
+    ```
+
+## Vectors
+What do you get from expression `4:14`? How about `c(4:14)`? Are they the same?
+    ```{r}
+    4:14
+    c(4:14)
+    4:14==c(4:14) # Why this?
+    # Then, assign into variables and check if they are "identical"
+    v1 <- 4:14
+    v2 <- c(4:14)
+    identical(v1, v2) # How is this different from 4:14==c(4:14)?
+    ```
+
+### Exercise:
+What expression will generate the following vector?
+    ```
+    -3, -2, -1, 0, 1, 2, 3, 4
+    ```
+
+Please type your code here. [Try to create a new "chunk" here yourself :)]
+```{r}
+c(-3, -2, -1, 0, 1, 2, 3, 4)
+```
+
+
+### Compute the average
+`mean()` function shall take the average. What's the average of numbers in
+`vec1`?
+
+```{r}
+mean(vec1)
+```
+
+## Data exploration
+R comes loaded with some data sets. For example, `cars`. What is the cars data
+about? Type `help(cars)` to read more about it.
+```{r}
+help(cars)
+```
+
+Let's assign it to a new variable called `carsdata`:
+
+```{r}
+carsdata <- cars
+```
+
+
+
+
+### Exercise: explore the `carsdata` dataframe
+Use  `View()`, `glimpse()` and `kable()` to explore the `cars` dataframe.
+Note, the `glimpse()` function is a available in the package `dplyr`. And, the
+`kable()` function is available in package `knitr`.
+    * Try writing `dplyr` in your console next to the prompt and see what happens.
+Reference: [Section 1.4.3 in ModernDive](https://moderndive.com/1-getting-started.html#exploredataframes)
+
+    ```{r echo=TRUE}
+    # First, we need to load the packages we need
+    library(dplyr)
+    library(knitr)
+    ```
+
+    ```
+    # Please copy this to the console and execute it (press enter)
+    View(carsdata)
+    ```
+
+    ```{r}
+    glimpse(carsdata) # glimpse is from dplyr
+    ```
+
+    ```{r}
+    kable(carsdata) #kable is from knitr
+    ```
+
+    What does `carsdata$speed` get you? Run the code below to find out 
+    ```{r}
+    carsdata$speed
+    ```
+
+### Exercise: convert to Canadian standards
+Create a new `speed_c` column based on the `speed` column, where the unit is km/h. (1 mph = 1.609344 km/h)
+
+    ```{r}
+    # Your code goes here
+carsdata$speed_c = carsdata$speed * 1.609344
+    ```
+Create a new `dist_c` column based on the `dist` column, where the unit is meters. (1 ft = 1/3.281 m )
+
+    ```{r}
+    # Your code goes here
+carsdata$dist_c = carsdata$dist * 1/3.281
+    ```
+Review the dataframe using `View(carsdata)`: we created two new columns.
+
+# Submission
+Please "knit" this R Markdown file and submit the compiled HTML file to
+Canvas. You will find an entry for Discussion Section 1 the Assignments section on Canvas.
